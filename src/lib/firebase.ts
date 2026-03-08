@@ -1,7 +1,7 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,10 +13,48 @@ const firebaseConfig = {
     measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+function getFirebaseApp(): FirebaseApp {
+    if (getApps().length > 0) return getApp();
+    if (!firebaseConfig.apiKey) {
+        throw new Error("Firebase API key is not configured.");
+    }
+    return initializeApp(firebaseConfig);
+}
 
-export { app, auth, db, storage };
+let _auth: Auth | null = null;
+let _db: Firestore | null = null;
+let _storage: FirebaseStorage | null = null;
+
+export function getFirebaseAuth(): Auth {
+    if (!_auth) _auth = getAuth(getFirebaseApp());
+    return _auth;
+}
+
+export function getFirebaseDb(): Firestore {
+    if (!_db) _db = getFirestore(getFirebaseApp());
+    return _db;
+}
+
+export function getFirebaseStorage(): FirebaseStorage {
+    if (!_storage) _storage = getStorage(getFirebaseApp());
+    return _storage;
+}
+
+// Lazy singletons — safe for static prerendering
+export const auth = new Proxy({} as Auth, {
+    get(_, prop) {
+        return (getFirebaseAuth() as unknown as Record<string | symbol, unknown>)[prop];
+    }
+});
+
+export const db = new Proxy({} as Firestore, {
+    get(_, prop) {
+        return (getFirebaseDb() as unknown as Record<string | symbol, unknown>)[prop];
+    }
+});
+
+export const storage = new Proxy({} as FirebaseStorage, {
+    get(_, prop) {
+        return (getFirebaseStorage() as unknown as Record<string | symbol, unknown>)[prop];
+    }
+});

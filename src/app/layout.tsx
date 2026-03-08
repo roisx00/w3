@@ -15,6 +15,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://web3hub.vercel.app'),
   title: {
     template: '%s | Web3 Hub',
     default: 'Web3 Hub | Discover Talents, Jobs & Airdrops',
