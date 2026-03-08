@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus | Web3 Intelligence Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+    <div id="app">
+        <header class="main-header glass">
+            <div class="logo">
+                <span class="icon">⚛️</span>
+                <span class="text">NEXUS</span>
+            </div>
+            <div class="search-bar glass-inner">
+                <input type="text" id="wallet-search" placeholder="Enter Wallet Address (0x...)">
+                <button id="search-btn">Analyze</button>
+            </div>
+            <div class="status-indicators">
+                <div class="gas-indicator glass-pill">
+                    <span class="label">GAS:</span>
+                    <span id="gas-value" class="value glow-cyan">24 Gwei</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Sidebar / Watchlist -->
+            <section class="sidebar glass">
+                <h3>Alpha Watchlist</h3>
+                <div class="watchlist-items" id="watchlist">
+                    <!-- Dynamic Items -->
+                </div>
+            </section>
+
+            <!-- Main Content Area -->
+            <section class="main-content">
+                <!-- Top Row: Stats -->
+                <div class="stats-row">
+                    <div class="stat-card glass-accent">
+                        <span class="label">Total Value</span>
+                        <h2 id="total-value" class="value-large">$ --</h2>
+                    </div>
+                    <div class="stat-card glass-accent">
+                        <span class="label">24h Change</span>
+                        <h2 id="total-change" class="value-large positive">+0.0%</h2>
+                    </div>
+                    <div class="stat-card glass-accent">
+                        <span class="label">Whale Alerts</span>
+                        <h2 id="alert-count" class="value-large">0</h2>
+                    </div>
+                </div>
+
+                <!-- Feed/Portfolio Split -->
+                <div class="content-split">
+                    <div class="portfolio-panel glass">
+                        <div class="panel-header">
+                            <h3>Portfolio Breakdown</h3>
+                            <div class="tabs">
+                                <button class="tab-btn active" data-tab="tokens">Tokens</button>
+                                <button class="tab-btn" data-tab="nfts">NFTs</button>
+                            </div>
+                        </div>
+                        <div class="panel-body" id="portfolio-container">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </div>
+
+                    <div class="activity-feed glass">
+                        <div class="panel-header">
+                            <h3>Live Alpha Stream</h3>
+                        </div>
+                        <div class="panel-body" id="feed-container">
+                            <!-- Dynamic Feed -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
