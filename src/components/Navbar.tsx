@@ -49,27 +49,40 @@ const Navbar = () => {
                 {/* Action Buttons */}
                 <div className="flex items-center gap-4">
                     {isLoggedIn ? (
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                             <Link
                                 href="/dashboard"
-                                className="flex items-center gap-2 glass-pill transition-all active:scale-95 group border-accent-primary/20 text-foreground/60"
+                                className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-accent-primary/20 bg-accent-primary/5 hover:bg-accent-primary/10 hover:border-accent-primary/40 hover:shadow-[0_0_20px_rgba(124,58,237,0.2)] transition-all duration-200 active:scale-95 group"
                             >
-                                <div className="w-5 h-5 rounded-full bg-accent-primary/20 flex items-center justify-center overflow-hidden border border-accent-primary/30">
-                                    {user?.photoUrl ? (
-                                        <img src={user.photoUrl} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="w-3 h-3 text-accent-primary" />
-                                    )}
+                                {/* Avatar with glowing ring */}
+                                <div className="relative flex-shrink-0">
+                                    <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-accent-primary/40 group-hover:ring-accent-primary/70 transition-all">
+                                        {user?.photoUrl ? (
+                                            <img src={user.photoUrl} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-accent-primary/20 flex items-center justify-center">
+                                                <User className="w-4 h-4 text-accent-primary" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* Online dot */}
+                                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-accent-success rounded-full border-2 border-background" />
                                 </div>
-                                <span className="text-sm font-semibold truncate max-w-[120px]">
-                                    {user?.displayName || 'My Profile'}
-                                </span>
+                                {/* Name + label */}
+                                <div className="hidden sm:flex flex-col leading-none">
+                                    <span className="text-xs font-black uppercase tracking-tight text-foreground truncate max-w-[100px]">
+                                        {user?.displayName?.split(' ')[0] || 'Profile'}
+                                    </span>
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-accent-primary/70">
+                                        Dashboard
+                                    </span>
+                                </div>
                             </Link>
                             <button
                                 onClick={() => logout()}
                                 className="text-[10px] font-bold uppercase tracking-widest text-foreground/20 hover:text-accent-danger transition-colors"
                             >
-                                Logout
+                                Out
                             </button>
                         </div>
                     ) : (
