@@ -15,7 +15,7 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent-primary/5 rounded-full blur-[120px] -ml-64 -mb-64" />
 
         <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 glass-pill px-4 py-2 border-black/5 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <div className="inline-flex items-center gap-2 glass-pill px-4 py-2 border-white/5 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <div className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">The Future of Web3 Recruitment</span>
           </div>
@@ -32,13 +32,13 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-300">
             <Link
               href="/onboarding"
-              className="w-full sm:w-auto px-12 py-5 bg-accent-primary text-white font-black rounded-2xl hover:scale-105 active:scale-95 transition-all text-sm uppercase tracking-tighter shadow-xl hover:bg-black"
+              className="w-full sm:w-auto px-12 py-5 bg-accent-primary text-white font-black rounded-2xl hover:scale-105 active:scale-95 transition-all text-sm uppercase tracking-tighter shadow-xl hover:bg-accent-secondary"
             >
               Build Your Resume
             </Link>
             <Link
               href="/jobs"
-              className="w-full sm:w-auto px-12 py-5 glass border-black/5 font-black rounded-2xl hover:bg-black/5 transition-all text-sm uppercase tracking-tighter text-foreground/60"
+              className="w-full sm:w-auto px-12 py-5 glass border-white/5 font-black rounded-2xl hover:bg-white/5 transition-all text-sm uppercase tracking-tighter text-foreground/60"
             >
               Explore Hub
             </Link>

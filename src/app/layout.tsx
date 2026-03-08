@@ -15,7 +15,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://web3hub.vercel.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://web3hub.vercel.app'),
   title: {
     template: '%s | Web3 Hub',
     default: 'Web3 Hub | Discover Talents, Jobs & Airdrops',
@@ -51,7 +51,7 @@ export default function RootLayout({
           <main className="pt-24 min-h-screen">
             {children}
           </main>
-          <footer className="border-t border-black/5 mt-20 py-10 px-6">
+          <footer className="border-t border-white/5 mt-20 py-10 px-6">
             <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-md bg-accent-primary flex items-center justify-center">

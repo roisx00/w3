@@ -4,31 +4,27 @@
   --font-sans: var(--font-inter);
   --font-display: var(--font-outfit);
 
-  --color-background: #CCCCCA;
-  --color-foreground: #0A0101;
-  --color-accent-primary: #4C4C4C;
-  --color-accent-secondary: #0A0101;
-  --color-accent-success: #1A4D2E;
-  --color-accent-warning: #7D5A50;
-  --color-accent-danger: #4A1D1D;
+  --color-background: #0A0A0A;
+  --color-foreground: #FFFFFF;
+  --color-accent-primary: #7C3AED;
+  --color-accent-secondary: #A855F7;
+  --color-accent-success: #10B981;
+  --color-accent-warning: #F59E0B;
+  --color-accent-danger: #EF4444;
 }
 
 @layer base {
   :root {
-    --background: #CCCCCA;
-    --foreground: #0A0101;
-    --accent-primary: #4C4C4C;
-    --accent-secondary: #0A0101;
-    --glass-bg: rgba(255, 255, 255, 0.4);
-    --glass-border: rgba(0, 0, 0, 0.1);
+    --background: #0A0A0A;
+    --foreground: #FFFFFF;
+    --accent-primary: #7C3AED;
+    --accent-secondary: #A855F7;
+    --glass-bg: rgba(255, 255, 255, 0.04);
+    --glass-border: rgba(255, 255, 255, 0.08);
   }
 
   body {
     background-color: var(--background);
-    background-image:
-      radial-gradient(at 0% 0%, rgba(255, 255, 255, 0.5) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(0, 0, 0, 0.05) 0px, transparent 50%),
-      url("https://www.transparenttextures.com/patterns/natural-paper.png");
     color: var(--foreground);
     font-family: var(--font-sans);
     min-height: 100vh;
@@ -43,28 +39,28 @@
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--glass-border);
     border-radius: 1.5rem;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
   }
 
   .glass-heavy {
-    background: rgba(204, 204, 202, 0.98);
+    background: rgba(20, 20, 20, 0.95);
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
-    border: 1px solid rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 2rem;
-    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
   }
 
   .glass-pill {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 9999px;
   }
 
   .btn-primary {
-    background-color: #4C4C4C;
+    background-color: #7C3AED;
     color: white;
     font-weight: 800;
     padding: 0.75rem 2rem;
@@ -75,16 +71,16 @@
   }
 
   .btn-primary:hover {
-    background-color: #0A0101;
+    background-color: #6D28D9;
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.35);
   }
 
   .nav-blur {
-    background: rgba(204, 204, 202, 0.8);
+    background: rgba(10, 10, 10, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -94,19 +90,12 @@
 }
 
 .text-glow-light {
-  text-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  text-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
 }
 
 @keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 .animate-float {
@@ -120,18 +109,4 @@
 
 .animate-glow-pulse {
   animation: glow-pulse 4s ease-in-out infinite;
-}
-
-/* Industrial Micro-texture */
-body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background-image: url("https://www.transparenttextures.com/patterns/asfalt-dark.png");
-  opacity: 0.03;
-  z-index: 50;
 }

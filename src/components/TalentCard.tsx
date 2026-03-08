@@ -66,7 +66,7 @@ const TalentCard = ({ talent }: TalentCardProps) => {
                         href={`https://twitter.com/${talent.socials.twitter.replace('@', '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-2 glass-pill text-foreground/40 hover:text-accent-primary transition-colors border-black/5"
+                        className="p-2 glass-pill text-foreground/40 hover:text-accent-primary transition-colors border-white/5"
                     >
                         <Twitter className="w-4 h-4" />
                     </a>
@@ -74,7 +74,7 @@ const TalentCard = ({ talent }: TalentCardProps) => {
                 {talent.walletAddress && (
                     <button
                         onClick={handleCopyWallet}
-                        className="flex-grow py-2 glass-pill text-[10px] font-bold tracking-widest uppercase text-foreground/40 hover:text-accent-primary transition-colors border-black/5 flex items-center justify-center gap-1.5"
+                        className="flex-grow py-2 glass-pill text-[10px] font-bold tracking-widest uppercase text-foreground/40 hover:text-accent-primary transition-colors border-white/5 flex items-center justify-center gap-1.5"
                     >
                         {copied ? <CheckCircle2 className="w-3 h-3 text-accent-success" /> : null}
                         {copied ? 'Copied!' : 'Copy Wallet'}
@@ -84,7 +84,7 @@ const TalentCard = ({ talent }: TalentCardProps) => {
 
             <Link
                 href={`/talents/${talent.id}`}
-                className="block w-full py-3 bg-accent-primary text-white text-center rounded-xl text-xs font-bold tracking-widest uppercase transition-all shadow-sm hover:shadow-md hover:bg-black"
+                className="block w-full py-3 bg-accent-primary text-white text-center rounded-xl text-xs font-bold tracking-widest uppercase transition-all shadow-sm hover:shadow-md hover:bg-accent-secondary"
             >
                 View Full Profile
             </Link>

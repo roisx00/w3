@@ -84,7 +84,7 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
                         onClick={() => toggleTrackAirdrop(airdrop.id)}
                         className={`flex-grow sm:flex-grow-0 px-6 py-3 rounded-xl font-bold text-xs uppercase transition-all flex items-center justify-center gap-2 ${isTracked
                             ? 'bg-accent-success/10 text-accent-success border border-accent-success/20'
-                            : 'bg-black/5 hover:bg-black/10 border-black/5'
+                            : 'bg-white/5 hover:bg-white/10 border border-white/5'
                             }`}
                     >
                         {isTracked ? <CheckCircle2 className="w-4 h-4" /> : null}

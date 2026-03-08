@@ -64,7 +64,7 @@ export default function AirdropsPage() {
             <header className="mb-16">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16">
                     <div>
-                        <div className="inline-flex items-center gap-2 glass-pill mb-4 border-black/5">
+                        <div className="inline-flex items-center gap-2 glass-pill mb-4 border-white/5">
                             <Sparkles className="w-3 h-3 text-accent-secondary" />
                             <span className="text-[10px] font-bold tracking-widest uppercase text-accent-secondary">NEW ALPHA DETECTED</span>
                         </div>
