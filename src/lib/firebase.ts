@@ -10,51 +10,14 @@ const firebaseConfig = {
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-function getFirebaseApp(): FirebaseApp {
-    if (getApps().length > 0) return getApp();
-    if (!firebaseConfig.apiKey) {
-        throw new Error("Firebase API key is not configured.");
-    }
-    return initializeApp(firebaseConfig);
-}
+// Only initialize if API key is present (skips during static prerendering with no env vars)
+const app: FirebaseApp | undefined = firebaseConfig.apiKey
+    ? (getApps().length > 0 ? getApp() : initializeApp(firebaseConfig))
+    : undefined;
 
-let _auth: Auth | null = null;
-let _db: Firestore | null = null;
-let _storage: FirebaseStorage | null = null;
-
-export function getFirebaseAuth(): Auth {
-    if (!_auth) _auth = getAuth(getFirebaseApp());
-    return _auth;
-}
-
-export function getFirebaseDb(): Firestore {
-    if (!_db) _db = getFirestore(getFirebaseApp());
-    return _db;
-}
-
-export function getFirebaseStorage(): FirebaseStorage {
-    if (!_storage) _storage = getStorage(getFirebaseApp());
-    return _storage;
-}
-
-// Lazy singletons — safe for static prerendering
-export const auth = new Proxy({} as Auth, {
-    get(_, prop) {
-        return (getFirebaseAuth() as unknown as Record<string | symbol, unknown>)[prop];
-    }
-});
-
-export const db = new Proxy({} as Firestore, {
-    get(_, prop) {
-        return (getFirebaseDb() as unknown as Record<string | symbol, unknown>)[prop];
-    }
-});
-
-export const storage = new Proxy({} as FirebaseStorage, {
-    get(_, prop) {
-        return (getFirebaseStorage() as unknown as Record<string | symbol, unknown>)[prop];
-    }
-});
+export const auth = (app ? getAuth(app) : undefined) as Auth;
+export const db = (app ? getFirestore(app) : undefined) as Firestore;
+export const storage = (app ? getStorage(app) : undefined) as FirebaseStorage;
