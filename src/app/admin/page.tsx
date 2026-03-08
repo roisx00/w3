@@ -49,7 +49,7 @@ export default function AdminDashboard() {
     }, [authLoading, isLoggedIn, router]);
 
     const fetchData = async () => {
-        const isOwner = user?.id === '8QlMg7xGGrWeJKW6WnEUF5OQUb53' || user?.email === 'roisx00@gmail.com';
+        const isOwner = user?.id === process.env.NEXT_PUBLIC_ADMIN_UID || user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
         if (!user?.isAdmin && !isOwner) {
             setLoading(false);

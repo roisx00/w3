@@ -40,6 +40,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Monitor Auth State
     useEffect(() => {
+        if (!auth) {
+            console.error("Firebase auth is not initialized. Check NEXT_PUBLIC_FIREBASE_* env vars on Vercel.");
+            setAuthLoading(false);
+            return;
+        }
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             setIsLoggedIn(!!firebaseUser);
 

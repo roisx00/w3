@@ -28,6 +28,7 @@ function OnboardingContent() {
     const [skillInput, setSkillInput] = useState('');
     const [done, setDone] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
+    const [errors, setErrors] = useState<string[]>([]);
     const [formData, setFormData] = useState({
         username: '',
         displayName: '',
@@ -56,7 +57,32 @@ function OnboardingContent() {
         }
     }, [user?.id]);
 
+    const validate = (): string[] => {
+        if (currentStep === 0) {
+            const e: string[] = [];
+            if (!formData.username.trim()) e.push('Username is required');
+            if (!formData.displayName.trim()) e.push('Display name is required');
+            if (!formData.bio.trim()) e.push('Bio is required');
+            return e;
+        }
+        if (currentStep === 1) {
+            const e: string[] = [];
+            if (formData.roles.length === 0) e.push('Select at least one role');
+            if (formData.skills.length === 0) e.push('Add at least one skill');
+            return e;
+        }
+        if (currentStep === 2) {
+            if (formData.experience.length === 0) return ['Add at least one experience entry'];
+            const incomplete = formData.experience.some(e => !e.projectName.trim() || !e.role.trim() || !e.duration.trim());
+            if (incomplete) return ['Fill in Project, Role, and Duration for all entries'];
+        }
+        return [];
+    };
+
     const handleNext = () => {
+        const errs = validate();
+        if (errs.length > 0) { setErrors(errs); return; }
+        setErrors([]);
         if (currentStep < STEPS.length - 1) {
             setCurrentStep(currentStep + 1);
         } else {
@@ -79,7 +105,7 @@ function OnboardingContent() {
     };
 
     const handleBack = () => {
-        if (currentStep > 0) setCurrentStep(currentStep - 1);
+        if (currentStep > 0) { setErrors([]); setCurrentStep(currentStep - 1); }
     };
 
     const toggleRole = (role: UserRole) => {
@@ -389,8 +415,20 @@ function OnboardingContent() {
                     </div>
                 )}
 
+                {/* Validation Errors */}
+                {errors.length > 0 && (
+                    <div className="mt-8 px-5 py-4 rounded-xl border border-accent-danger/30 bg-accent-danger/5 space-y-1">
+                        {errors.map((err, i) => (
+                            <p key={i} className="text-xs font-bold text-accent-danger flex items-center gap-2">
+                                <span className="w-1 h-1 rounded-full bg-accent-danger flex-shrink-0" />
+                                {err}
+                            </p>
+                        ))}
+                    </div>
+                )}
+
                 {/* Footer Actions */}
-                <div className="flex items-center justify-between mt-12 pt-8 border-t border-white/5">
+                <div className="flex items-center justify-between mt-8 pt-8 border-t border-white/5">
                     <button onClick={handleBack} disabled={currentStep === 0}
                         className={`flex items-center gap-2 text-sm font-bold uppercase tracking-widest transition-opacity ${
                             currentStep === 0 ? 'opacity-0 pointer-events-none' : 'text-foreground/40 hover:text-foreground'
