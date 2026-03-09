@@ -1,6 +1,7 @@
 import { Briefcase, Sparkles, Users, ArrowUpRight, MessageCircle, Wallet, FileText } from 'lucide-react';
 import Link from 'next/link';
 import StatsBar from '@/components/StatsBar';
+import HomeCTA from '@/components/HomeCTA';
 
 export default function Home() {
   return (
@@ -31,12 +32,7 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-300">
-            <Link
-              href="/onboarding"
-              className="w-full sm:w-auto px-12 py-5 bg-accent-primary text-white font-black rounded-2xl hover:scale-105 active:scale-95 transition-all text-sm uppercase tracking-tighter shadow-xl hover:bg-accent-secondary"
-            >
-              Build Your Resume
-            </Link>
+            <HomeCTA />
             <Link
               href="/jobs"
               className="w-full sm:w-auto px-12 py-5 glass border-white/5 font-black rounded-2xl hover:bg-white/5 transition-all text-sm uppercase tracking-tighter text-foreground/60"
@@ -198,13 +194,7 @@ export default function Home() {
 
         {/* CTA */}
         <div className="text-center">
-          <Link
-            href="/onboarding"
-            className="inline-flex items-center gap-3 px-10 py-4 bg-accent-primary text-white font-black rounded-xl hover:bg-accent-secondary hover:scale-105 transition-all text-sm uppercase tracking-widest shadow-xl"
-          >
-            Join the Hub
-            <ArrowUpRight className="w-4 h-4" />
-          </Link>
+          <HomeCTA />
         </div>
       </section>
     </div>
