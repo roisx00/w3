@@ -12,6 +12,7 @@ import { Star, MessageSquarePlus, Trash2, Loader2, ShieldAlert } from 'lucide-re
 interface ReviewSectionProps {
     talentId: string;
     talentName: string;
+    profileScore?: number;  // base score from profile completeness (0–60)
 }
 
 function Stars({ rating, interactive = false, onSelect }: {
@@ -52,7 +53,7 @@ function scoreLabel(score: number) {
     return { label: 'Poor', color: 'text-accent-danger' };
 }
 
-export default function ReviewSection({ talentId, talentName }: ReviewSectionProps) {
+export default function ReviewSection({ talentId, talentName, profileScore = 0 }: ReviewSectionProps) {
     const { user, isLoggedIn } = useAppContext();
     const [reviews, setReviews] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
@@ -66,8 +67,12 @@ export default function ReviewSection({ talentId, talentName }: ReviewSectionPro
     const hasReviewed = reviews.some(r => r.reviewerId === user?.id);
     const canReview = isLoggedIn && !isOwnProfile && !hasReviewed && user?.hasBadge;
 
-    const score = reviews.length > 0
-        ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length / 5) * 100)
+    // Blend: profileScore (base, 0–60) + review adjustment (0–40)
+    const reviewAvgScore = reviews.length > 0
+        ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length / 5) * 40)
+        : null;
+    const score = profileScore > 0 || reviewAvgScore !== null
+        ? Math.min(100, profileScore + (reviewAvgScore ?? 0))
         : null;
 
     useEffect(() => {
@@ -109,8 +114,9 @@ export default function ReviewSection({ talentId, talentName }: ReviewSectionPro
             const updated = [newReview, ...reviews];
             setReviews(updated);
 
-            // Update score on talent doc for quick display
-            const newScore = Math.round((updated.reduce((s, r) => s + r.rating, 0) / updated.length / 5) * 100);
+            // Update score on talent doc: profileScore (base) + review portion
+            const reviewPart = Math.round((updated.reduce((s, r) => s + r.rating, 0) / updated.length / 5) * 40);
+            const newScore = Math.min(100, profileScore + reviewPart);
             await updateDoc(doc(db, 'talents', talentId), {
                 reputationScore: newScore,
                 reviewCount: updated.length,
@@ -133,8 +139,8 @@ export default function ReviewSection({ talentId, talentName }: ReviewSectionPro
             const updated = reviews.filter(r => r.id !== reviewId);
             setReviews(updated);
             const newScore = updated.length > 0
-                ? Math.round((updated.reduce((s, r) => s + r.rating, 0) / updated.length / 5) * 100)
-                : null;
+                ? Math.min(100, profileScore + Math.round((updated.reduce((s, r) => s + r.rating, 0) / updated.length / 5) * 40))
+                : profileScore || null;
             await updateDoc(doc(db, 'talents', talentId), {
                 reputationScore: newScore ?? 0,
                 reviewCount: updated.length,

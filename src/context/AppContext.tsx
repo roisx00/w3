@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { TalentProfile, JobPosting, Airdrop } from '@/lib/types';
+import { computeProfileScore } from '@/lib/promos';
 import { auth, db } from '@/lib/firebase';
 import {
     onAuthStateChanged,
@@ -194,6 +195,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 photoUrl: updated.photoUrl || firebaseUser.photoURL || '',
                 resumeUrl: updated.resumeUrl || '',
                 updatedAt: serverTimestamp(),
+                profileScore: computeProfileScore(updated),
                 // NOTE: isAdmin should only be toggled manually in Firebase Console for security
             };
             // Include badge/boost fields if provided

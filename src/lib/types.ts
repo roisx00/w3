@@ -43,7 +43,8 @@ export interface TalentProfile {
     cvBoosted?: boolean;
     cvBoostExpiry?: string;
     openToWork?: boolean;
-    reputationScore?: number;   // 0–100, stored for quick display on cards
+    profileScore?: number;      // 0–60, computed from profile completeness
+    reputationScore?: number;   // 0–100, blend of profileScore + reviews
     reviewCount?: number;
 }
 
