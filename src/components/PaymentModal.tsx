@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Check, X, Wallet, AlertCircle, ExternalLink } from 'lucide-react';
+import { Copy, Check, X, Wallet, AlertCircle, ExternalLink, Loader2, ShieldCheck, ShieldX } from 'lucide-react';
 import { PAYMENT_WALLET, BASE_CHAIN_NAME, BASE_EXPLORER_TX } from '@/lib/payments';
 
 interface PaymentModalProps {
@@ -13,12 +13,18 @@ interface PaymentModalProps {
     loading?: boolean;
 }
 
+type VerifyState = 'idle' | 'verifying' | 'verified' | 'failed';
+
 export default function PaymentModal({ isOpen, onClose, onConfirm, amount, description, loading }: PaymentModalProps) {
     const [txHash, setTxHash] = useState('');
     const [copied, setCopied] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [verifyState, setVerifyState] = useState<VerifyState>('idle');
+    const [verifyError, setVerifyError] = useState('');
 
     if (!isOpen) return null;
+
+    const isValidHash = /^0x[a-fA-F0-9]{64}$/.test(txHash.trim());
 
     const copyAddress = async () => {
         await navigator.clipboard.writeText(PAYMENT_WALLET);
@@ -27,26 +33,49 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
     };
 
     const handleSubmit = async () => {
-        if (!txHash.trim()) {
-            alert('Please enter your transaction hash.');
-            return;
-        }
-        if (!/^0x[a-fA-F0-9]{64}$/.test(txHash.trim())) {
-            alert('Please enter a valid Base transaction hash (0x followed by 64 hex characters).');
-            return;
-        }
+        if (!isValidHash) return;
         setSubmitting(true);
+        setVerifyState('verifying');
+        setVerifyError('');
+
         try {
+            // Step 1: Verify on-chain via BaseScan
+            const res = await fetch('/api/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ txHash: txHash.trim(), expectedAmount: amount }),
+            });
+            const data = await res.json();
+
+            if (!data.valid) {
+                setVerifyState('failed');
+                setVerifyError(data.error || 'Verification failed. Please check your transaction.');
+                return;
+            }
+
+            // Step 2: Chain verified — activate the perk
+            setVerifyState('verified');
             await onConfirm(txHash.trim());
             setTxHash('');
+        } catch {
+            setVerifyState('failed');
+            setVerifyError('Network error. Please try again.');
         } finally {
             setSubmitting(false);
         }
     };
 
+    const handleClose = () => {
+        if (verifyState === 'verified') return; // don't close mid-activation
+        setVerifyState('idle');
+        setVerifyError('');
+        setTxHash('');
+        onClose();
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={handleClose} />
             <div className="relative glass max-w-md w-full p-8 rounded-3xl border border-white/20 shadow-2xl animate-in fade-in zoom-in-95 duration-200 space-y-6">
 
                 {/* Header */}
@@ -55,7 +84,7 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-primary mb-1">Payment Required</p>
                         <h2 className="text-xl font-black uppercase">{description}</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 text-foreground/20 hover:text-foreground transition-colors">
+                    <button onClick={handleClose} className="p-2 text-foreground/20 hover:text-foreground transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -95,11 +124,12 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                     <input
                         type="text"
                         value={txHash}
-                        onChange={e => setTxHash(e.target.value)}
+                        onChange={e => { setTxHash(e.target.value); setVerifyState('idle'); setVerifyError(''); }}
                         placeholder="0x..."
-                        className="w-full glass bg-white/5 border-white/10 px-4 py-3 rounded-xl focus:border-accent-success/50 outline-none transition-all font-mono text-xs"
+                        disabled={submitting || verifyState === 'verified'}
+                        className="w-full glass bg-white/5 border-white/10 px-4 py-3 rounded-xl focus:border-accent-success/50 outline-none transition-all font-mono text-xs disabled:opacity-50"
                     />
-                    {/^0x[a-fA-F0-9]{64}$/.test(txHash.trim()) && (
+                    {isValidHash && verifyState === 'idle' && (
                         <a
                             href={`${BASE_EXPLORER_TX}${txHash}`}
                             target="_blank"
@@ -109,9 +139,33 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                             <ExternalLink className="w-3 h-3" /> View on BaseScan
                         </a>
                     )}
-                    <p className="text-[10px] text-foreground/20 font-medium">
-                        We verify manually within 24h and activate your listing.
-                    </p>
+
+                    {/* Verification status */}
+                    {verifyState === 'verifying' && (
+                        <div className="flex items-center gap-2 text-[11px] font-bold text-accent-primary">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            Verifying on Base chain...
+                        </div>
+                    )}
+                    {verifyState === 'verified' && (
+                        <div className="flex items-center gap-2 text-[11px] font-bold text-accent-success">
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            Verified on-chain — activating your perk...
+                        </div>
+                    )}
+                    {verifyState === 'failed' && (
+                        <div className="flex items-start gap-2 text-[11px] font-bold text-accent-danger mt-1">
+                            <ShieldX className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                            {verifyError}
+                        </div>
+                    )}
+
+                    {verifyState === 'idle' && (
+                        <p className="text-[10px] text-foreground/30 font-medium flex items-center gap-1.5">
+                            <ShieldCheck className="w-3 h-3 text-accent-success/50" />
+                            Auto-verified instantly on Base — no waiting.
+                        </p>
+                    )}
                 </div>
 
                 {/* Warning */}
@@ -125,17 +179,21 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                 {/* Actions */}
                 <div className="flex gap-3 pt-2">
                     <button
-                        onClick={onClose}
-                        className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-foreground/30 hover:text-foreground transition-colors"
+                        onClick={handleClose}
+                        disabled={verifyState === 'verified'}
+                        className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-foreground/30 hover:text-foreground transition-colors disabled:opacity-30"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleSubmit}
-                        disabled={!txHash.trim() || submitting || !!loading}
-                        className="flex-1 py-3 bg-accent-success text-background font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+                        disabled={!isValidHash || submitting || !!loading || verifyState === 'verified' || verifyState === 'verifying'}
+                        className="flex-1 py-3 bg-accent-success text-background font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
                     >
-                        {submitting || loading ? 'Confirming...' : 'Confirm Payment'}
+                        {verifyState === 'verifying' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                        {verifyState === 'verified' ? 'Activating...' :
+                         verifyState === 'verifying' ? 'Verifying...' :
+                         'Confirm Payment'}
                     </button>
                 </div>
             </div>
