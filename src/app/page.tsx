@@ -1,4 +1,4 @@
-import { Briefcase, Sparkles, Users, ArrowUpRight } from 'lucide-react';
+import { Briefcase, Sparkles, Users, ArrowUpRight, MessageCircle, Wallet, FileText } from 'lucide-react';
 import Link from 'next/link';
 import StatsBar from '@/components/StatsBar';
 
@@ -90,6 +90,81 @@ export default function Home() {
             <p className="text-foreground/60 text-sm leading-relaxed">
               Stay ahead of the trend with a curated dashboard of testnet campaigns and confirmed token reward programs.
             </p>
+          </Link>
+        </div>
+      </section>
+
+      {/* Why W3Hub */}
+      <section className="max-w-7xl mx-auto px-6 py-24 border-t border-white/5">
+        <div className="max-w-3xl mx-auto text-center mb-16">
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-accent-primary mb-4">The Problem</p>
+          <h2 className="font-display font-black text-4xl md:text-5xl uppercase tracking-tight mb-6 leading-tight">
+            Web3 talent is <span className="text-foreground/30">scattered.</span>
+          </h2>
+          <p className="text-foreground/50 text-lg leading-relaxed">
+            Hiring happens in Discord DMs. Resumes live in random Google Docs. Airdrop alpha gets buried in Telegram groups.
+            There's no single place where talent, projects, and opportunities actually connect.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+          {/* Before */}
+          <div className="glass p-6 border-accent-danger/20 bg-accent-danger/5 space-y-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-accent-danger">Before W3Hub</p>
+            <div className="space-y-3">
+              {[
+                { icon: MessageCircle, text: 'Job offers buried in Discord DMs' },
+                { icon: FileText, text: 'Resumes as Google Docs nobody finds' },
+                { icon: Wallet, text: 'Airdrop alpha lost in Telegram noise' },
+              ].map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-3 text-sm text-foreground/50">
+                  <div className="w-6 h-6 rounded-lg bg-accent-danger/10 flex items-center justify-center shrink-0">
+                    <Icon className="w-3.5 h-3.5 text-accent-danger" />
+                  </div>
+                  <span className="line-through decoration-accent-danger/40">{text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Arrow */}
+          <div className="flex items-center justify-center">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center mx-auto">
+                <span className="text-2xl font-black text-accent-primary">W3</span>
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-accent-primary">One hub</p>
+            </div>
+          </div>
+
+          {/* After */}
+          <div className="glass p-6 border-accent-success/20 bg-accent-success/5 space-y-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-accent-success">With W3Hub</p>
+            <div className="space-y-3">
+              {[
+                { icon: Users, text: 'Verified talent profiles, searchable' },
+                { icon: Briefcase, text: 'Jobs posted publicly, applied on-chain' },
+                { icon: Sparkles, text: 'Curated airdrop alpha in one place' },
+              ].map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-3 text-sm text-foreground/70">
+                  <div className="w-6 h-6 rounded-lg bg-accent-success/10 flex items-center justify-center shrink-0">
+                    <Icon className="w-3.5 h-3.5 text-accent-success" />
+                  </div>
+                  <span>{text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="text-center">
+          <Link
+            href="/onboarding"
+            className="inline-flex items-center gap-3 px-10 py-4 bg-accent-primary text-white font-black rounded-xl hover:bg-accent-secondary hover:scale-105 transition-all text-sm uppercase tracking-widest shadow-xl"
+          >
+            Join the Hub
+            <ArrowUpRight className="w-4 h-4" />
           </Link>
         </div>
       </section>
