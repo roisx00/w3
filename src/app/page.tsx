@@ -50,48 +50,87 @@ export default function Home() {
       {/* Live Stats */}
       <StatsBar />
 
-      {/* Stats / Features Grid */}
-      <section className="max-w-7xl mx-auto px-6 py-20 border-t border-white/5">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Link href="/talents" className="glass p-8 hover:border-accent-primary/30 transition-colors group text-left">
-            <div className="w-12 h-12 rounded-xl bg-accent-primary/10 flex items-center justify-center mb-6 border border-accent-primary/20 group-hover:scale-110 transition-transform">
-              <Users className="w-6 h-6 text-accent-primary" />
-            </div>
-            <h3 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
-              Talent Discovery
-              <ArrowUpRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </h3>
-            <p className="text-foreground/60 text-sm leading-relaxed">
-              Browse a verified database of Web3 professionals. Filter by role, experience, and ecosystem expertise.
-            </p>
-          </Link>
-
-          <Link href="/jobs" className="glass p-8 hover:border-accent-secondary/30 transition-colors group text-left">
-            <div className="w-12 h-12 rounded-xl bg-accent-secondary/10 flex items-center justify-center mb-6 border border-accent-secondary/20 group-hover:scale-110 transition-transform">
-              <Briefcase className="w-6 h-6 text-accent-secondary" />
-            </div>
-            <h3 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
-              Direct Hiring
-              <ArrowUpRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </h3>
-            <p className="text-foreground/60 text-sm leading-relaxed">
-              Post listings for developers, mods, and designers. Manage applications directly through our on-chain portal.
-            </p>
-          </Link>
-
-          <Link href="/airdrops" className="glass p-8 hover:border-accent-success/30 transition-colors group text-left">
-            <div className="w-12 h-12 rounded-xl bg-accent-success/10 flex items-center justify-center mb-6 border border-accent-success/20 group-hover:scale-110 transition-transform">
-              <Sparkles className="w-6 h-6 text-accent-success" />
-            </div>
-            <h3 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
-              Alpha Discovery
-              <ArrowUpRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </h3>
-            <p className="text-foreground/60 text-sm leading-relaxed">
-              Stay ahead of the trend with a curated dashboard of testnet campaigns and confirmed token reward programs.
-            </p>
-          </Link>
+      {/* 3 Pillars */}
+      <section className="max-w-7xl mx-auto px-6 py-24 border-t border-white/5 space-y-6">
+        <div className="text-center mb-16">
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground/30 mb-3">What We Offer</p>
+          <h2 className="font-display font-black text-4xl md:text-5xl uppercase tracking-tight">Three pillars. <span className="text-accent-primary">One ecosystem.</span></h2>
         </div>
+
+        {/* Pillar 1 — Resumes */}
+        <Link href="/onboarding" className="group block glass p-8 md:p-10 hover:border-accent-primary/40 transition-all relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/5 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-accent-primary/10 transition-colors" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-8">
+            <div className="shrink-0">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-primary/50 mb-2">01</div>
+              <div className="w-16 h-16 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="w-8 h-8 text-accent-primary" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="font-display font-black text-3xl uppercase tracking-tight">Resumes</h3>
+                <ArrowUpRight className="w-5 h-5 text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <p className="text-foreground/50 text-base mb-5 max-w-xl">Build your Web3 resume once — share it everywhere. Your proof of work, on-chain history, and skills in one shareable link.</p>
+              <div className="flex flex-wrap gap-2">
+                {['Discord Moderation', 'Community Manager', 'Solidity Dev', 'Marketing', 'Ambassador', 'Designer', 'Researcher', 'Project Manager'].map(skill => (
+                  <span key={skill} className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg bg-accent-primary/10 border border-accent-primary/20 text-accent-primary/70">{skill}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* Pillar 2 — Airdrops */}
+        <Link href="/airdrops" className="group block glass p-8 md:p-10 hover:border-accent-success/40 transition-all relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-accent-success/5 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-accent-success/10 transition-colors" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-8">
+            <div className="shrink-0">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-success/50 mb-2">02</div>
+              <div className="w-16 h-16 rounded-2xl bg-accent-success/10 border border-accent-success/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Sparkles className="w-8 h-8 text-accent-success" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="font-display font-black text-3xl uppercase tracking-tight">Airdrops</h3>
+                <ArrowUpRight className="w-5 h-5 text-accent-success opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <p className="text-foreground/50 text-base mb-5 max-w-xl">Discover new airdrops early. Curated alpha — testnet campaigns, confirmed token rewards, and points programs — before everyone else finds out.</p>
+              <div className="flex flex-wrap gap-2">
+                {['Testnet Tasks', 'Points Programs', 'Token Rewards', 'Early Access', 'NFT Mints', 'DeFi Protocols'].map(tag => (
+                  <span key={tag} className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg bg-accent-success/10 border border-accent-success/20 text-accent-success/70">{tag}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* Pillar 3 — Careers */}
+        <Link href="/jobs" className="group block glass p-8 md:p-10 hover:border-accent-secondary/40 transition-all relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-accent-secondary/5 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-accent-secondary/10 transition-colors" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-8">
+            <div className="shrink-0">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-secondary/50 mb-2">03</div>
+              <div className="w-16 h-16 rounded-2xl bg-accent-secondary/10 border border-accent-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Briefcase className="w-8 h-8 text-accent-secondary" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="font-display font-black text-3xl uppercase tracking-tight">Careers</h3>
+                <ArrowUpRight className="w-5 h-5 text-accent-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <p className="text-foreground/50 text-base mb-5 max-w-xl">Projects post jobs. Talent gets hired directly — no middlemen, no recruiters. Apply on-chain, get paid in crypto.</p>
+              <div className="flex flex-wrap gap-2">
+                {['Full-time', 'Part-time', 'Freelance', 'Paid in USDC', 'Remote', 'Token Comp', 'Entry Level', 'Senior'].map(tag => (
+                  <span key={tag} className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg bg-accent-secondary/10 border border-accent-secondary/20 text-accent-secondary/70">{tag}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Link>
       </section>
 
       {/* Why W3Hub */}
