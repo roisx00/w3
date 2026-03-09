@@ -1,7 +1,7 @@
 'use client';
 
 import { JobPosting } from '@/lib/types';
-import { Briefcase, MapPin, DollarSign, Clock, ArrowRight, Bookmark } from 'lucide-react';
+import { Briefcase, MapPin, DollarSign, Clock, ArrowRight, Bookmark, BadgeCheck } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
 import Link from 'next/link';
 
@@ -45,7 +45,12 @@ const JobCard = ({ job }: JobCardProps) => {
                 </div>
                 <div>
                     <h3 className="font-display font-bold text-xl leading-tight mb-1">{job.roleNeeded}</h3>
-                    <span className="text-sm font-semibold text-accent-primary/80 uppercase tracking-tighter">{job.projectName}</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold text-accent-primary/80 uppercase tracking-tighter">{job.projectName}</span>
+                        {job.paymentStatus === 'verified' && (
+                            <BadgeCheck className="w-4 h-4 text-blue-400 shrink-0" />
+                        )}
+                    </div>
                 </div>
             </div>
 

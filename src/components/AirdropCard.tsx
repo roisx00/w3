@@ -1,7 +1,7 @@
 'use client';
 
 import { Airdrop } from '@/lib/types';
-import { Sparkles, Users, Database, Shield, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Users, Database, Shield, ArrowRight, CheckCircle2, BadgeCheck } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
 import Link from 'next/link';
 
@@ -34,6 +34,9 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <h3 className="font-display font-black text-2xl tracking-tight">{airdrop.projectName}</h3>
+                            {airdrop.paymentStatus === 'verified' && (
+                                <BadgeCheck className="w-5 h-5 text-blue-400 shrink-0" />
+                            )}
                             <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-bold text-foreground/40 uppercase">
                                 {airdrop.blockchain}
                             </span>

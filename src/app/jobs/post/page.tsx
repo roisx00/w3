@@ -122,11 +122,12 @@ function PostJobForm() {
     const handlePaymentConfirm = async (txHash: string) => {
         setLoading(true);
         try {
+            // Payment already verified on-chain — post goes live instantly
             const jobRef = await addDoc(collection(db, 'jobs'), {
                 ...formData,
                 postedBy: user?.id,
                 status: 'Open',
-                paymentStatus: 'pending',
+                paymentStatus: 'verified',
                 paymentTxHash: txHash,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
@@ -139,13 +140,14 @@ function PostJobForm() {
                 type: 'job_post',
                 amount: PRICES.JOB_POST,
                 txHash,
-                status: 'pending',
+                status: 'verified',
                 refId: jobRef.id,
                 refName: formData.projectName,
                 createdAt: serverTimestamp(),
             });
 
             setShowPaymentModal(false);
+            setSuccessFree(true);  // reuse "live" success screen
             setSuccess(true);
         } catch (err) {
             console.error('Error posting job:', err);
