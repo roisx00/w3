@@ -120,7 +120,7 @@ export default function PricingPage() {
                     All payments in <span className="text-accent-success">USDC</span>
                 </h1>
                 <p className="text-foreground/40 font-medium text-lg max-w-xl mx-auto">
-                    On Base Mainnet. No hidden fees. Verified manually within 24h.
+                    On Base Mainnet. No hidden fees. Verified instantly on-chain.
                 </p>
             </header>
 
@@ -184,7 +184,7 @@ export default function PricingPage() {
                         { step: '01', title: 'Fill the form', desc: 'Complete your job, airdrop, or profile form.' },
                         { step: '02', title: 'Send USDC', desc: `Send the exact USDC amount on ${BASE_CHAIN_NAME} to our wallet.` },
                         { step: '03', title: 'Submit TX hash', desc: 'Paste your transaction hash in the payment modal.' },
-                        { step: '04', title: 'Go live', desc: 'We verify manually within 24h and activate your listing.' },
+                        { step: '04', title: 'Go live instantly', desc: 'We verify on-chain in seconds. Your listing activates immediately — no waiting.' },
                     ].map((s) => (
                         <div key={s.step} className="space-y-2">
                             <p className="text-4xl font-black text-foreground/10">{s.step}</p>
