@@ -7,7 +7,9 @@ import {
     onAuthStateChanged,
     signInWithPopup,
     GoogleAuthProvider,
-    signOut
+    signOut,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
 } from 'firebase/auth';
 import {
     doc,
@@ -23,6 +25,8 @@ interface AppState {
     bookmarkedJobs: string[];
     trackedAirdrops: string[];
     login: () => void;
+    loginWithEmail: (email: string, password: string) => Promise<void>;
+    registerWithEmail: (email: string, password: string) => Promise<void>;
     logout: () => void;
     toggleBookmarkJob: (jobId: string) => void;
     toggleTrackAirdrop: (airdropId: string) => void;
@@ -110,6 +114,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             console.error("Firebase login error:", e);
             alert(`Login error: ${e.message || 'Unknown error'}`);
         }
+    };
+
+    const loginWithEmail = async (email: string, password: string) => {
+        await signInWithEmailAndPassword(auth, email, password);
+    };
+
+    const registerWithEmail = async (email: string, password: string) => {
+        await createUserWithEmailAndPassword(auth, email, password);
     };
 
     const logout = async () => {
@@ -204,6 +216,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             bookmarkedJobs,
             trackedAirdrops,
             login,
+            loginWithEmail,
+            registerWithEmail,
             logout,
             toggleBookmarkJob,
             toggleTrackAirdrop,
