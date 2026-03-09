@@ -93,6 +93,7 @@ function DashboardContent() {
         if (!user?.id) return;
         setPaymentLoading(true);
         try {
+            // Payment already verified on-chain by PaymentModal — activate immediately
             await addDoc(collection(db, 'payments'), {
                 userId: user.id,
                 userEmail: user.email || '',
@@ -100,13 +101,14 @@ function DashboardContent() {
                 type: 'user_badge',
                 amount: PRICES.USER_BADGE,
                 txHash,
-                status: 'pending',
+                status: 'verified',
                 createdAt: serverTimestamp(),
             });
-            updateProfile({ hasBadgePending: true, badgeTxHash: txHash } as any);
+            await updateDoc(doc(db, 'talents', user.id), { hasBadge: true, hasBadgePending: false, badgeTxHash: txHash });
+            updateProfile({ hasBadge: true, hasBadgePending: false, badgeTxHash: txHash } as any);
             setShowBadgeModal(false);
         } catch (err) {
-            alert('Failed to submit badge payment.');
+            alert('Failed to activate badge. Please try again.');
         } finally {
             setPaymentLoading(false);
         }

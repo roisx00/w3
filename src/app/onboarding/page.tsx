@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ArrowLeft, CheckCircle2, User, Briefcase, Award, Plus, Trash2, Copy, Share2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle2, User, Briefcase, Award, Plus, Trash2, Copy, Share2, Camera, Loader2 } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
 import { UserRole, Experience } from '@/lib/types';
 import AuthGuard from '@/components/auth/AuthGuard';
@@ -30,6 +30,7 @@ function OnboardingContent() {
     const [done, setDone] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
     const [errors, setErrors] = useState<string[]>([]);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [formData, setFormData] = useState({
         username: '',
         displayName: '',
@@ -40,6 +41,7 @@ function OnboardingContent() {
         roles: [] as UserRole[],
         skills: [] as string[],
         experience: [] as Experience[],
+        photoUrl: '',
     });
 
     useEffect(() => {
@@ -54,9 +56,31 @@ function OnboardingContent() {
                 roles: user.roles || [],
                 skills: user.skills || [],
                 experience: user.experience || [],
+                photoUrl: user.photoUrl || '',
             });
         }
     }, [user?.id]);
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) { alert('Please upload an image file.'); return; }
+        if (file.size > 5 * 1024 * 1024) { alert('Photo must be under 5MB.'); return; }
+        setUploadingPhoto(true);
+        try {
+            const data = new FormData();
+            data.append('file', file);
+            const res = await fetch('/api/upload', { method: 'POST', body: data });
+            if (!res.ok) throw new Error('Upload failed');
+            const { url } = await res.json();
+            setFormData(prev => ({ ...prev, photoUrl: url }));
+        } catch {
+            alert('Failed to upload photo. Please try again.');
+        } finally {
+            setUploadingPhoto(false);
+            e.target.value = '';
+        }
+    };
 
     const validate = (): string[] => {
         if (currentStep === 0) {
@@ -109,6 +133,7 @@ function OnboardingContent() {
                     roles: formData.roles,
                     skills: formData.skills,
                     experience: formData.experience,
+                    ...(formData.photoUrl ? { photoUrl: formData.photoUrl } : {}),
                     ...(grantBadge ? { hasBadge: true } : {}),
                 } as any);
                 setDone(true);
@@ -253,6 +278,27 @@ function OnboardingContent() {
                     <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                         <h2 className="font-display text-3xl font-extrabold mb-6">Tell us about <span className="text-accent-primary">yourself.</span></h2>
                         <div className="space-y-6">
+                            {/* Profile Photo Upload */}
+                            <div className="flex flex-col items-center gap-3 pb-4 border-b border-white/5">
+                                <label className="text-xs font-bold text-foreground/40 uppercase tracking-widest">Profile Photo</label>
+                                <label className="relative cursor-pointer group">
+                                    <div className="w-24 h-24 rounded-full bg-accent-primary/20 border-2 border-accent-primary/30 flex items-center justify-center overflow-hidden font-display font-black text-3xl text-accent-primary transition-all group-hover:border-accent-primary/60">
+                                        {formData.photoUrl ? (
+                                            <img src={formData.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                                        ) : (
+                                            formData.displayName?.charAt(0)?.toUpperCase() || <User className="w-10 h-10 opacity-40" />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {uploadingPhoto
+                                                ? <Loader2 className="w-6 h-6 text-white animate-spin" />
+                                                : <Camera className="w-6 h-6 text-white" />
+                                            }
+                                        </div>
+                                    </div>
+                                    <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" disabled={uploadingPhoto} />
+                                </label>
+                                <p className="text-[10px] text-foreground/30 font-medium">Click to upload · PNG, JPG · max 5MB</p>
+                            </div>
                             <div>
                                 <label className="block text-xs font-bold text-foreground/40 uppercase tracking-widest mb-2 px-1">Username</label>
                                 <input type="text" value={formData.username}
