@@ -196,6 +196,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 resumeUrl: updated.resumeUrl || '',
                 updatedAt: serverTimestamp(),
                 profileScore: computeProfileScore(updated),
+                // If no reviews yet, reputationScore = profileScore so cards show it immediately
+                ...(!updated.reviewCount ? { reputationScore: computeProfileScore(updated) } : {}),
                 // NOTE: isAdmin should only be toggled manually in Firebase Console for security
             };
             // Include badge/boost fields if provided
