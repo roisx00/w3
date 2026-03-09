@@ -4,6 +4,7 @@ import { use, useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { TalentProfile } from '@/lib/types';
+import ReviewSection from '@/components/ReviewSection';
 import {
     Send, Briefcase, Calendar, Award, ChevronLeft, CheckCircle2,
     Copy, Link as LinkIcon, ShieldCheck, MessageSquare, Share2, Zap
@@ -254,6 +255,9 @@ export default function TalentDetailPage({ params }: { params: Promise<{ id: str
                             )}
                         </div>
                     </section>
+
+                    {/* Reviews & Reputation */}
+                    <ReviewSection talentId={id} talentName={talent.displayName} />
                 </div>
             </div>
         </div>

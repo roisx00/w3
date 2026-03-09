@@ -51,12 +51,24 @@ const TalentCard = ({ talent }: TalentCardProps) => {
                         </div>
                     </div>
                 </div>
-                <Link
-                    href={`/talents/${talent.id}`}
-                    className="p-2 glass hover:bg-white/10 rounded-lg transition-colors group/link"
-                >
-                    <ExternalLink className="w-4 h-4 text-accent-primary group-hover/link:scale-110 transition-transform" />
-                </Link>
+                <div className="flex items-center gap-2">
+                    {talent.reputationScore != null && talent.reputationScore > 0 && (
+                        <div className={`text-center px-2 py-1 rounded-lg border text-[10px] font-black ${
+                            talent.reputationScore >= 85 ? 'bg-accent-success/10 border-accent-success/30 text-accent-success' :
+                            talent.reputationScore >= 70 ? 'bg-accent-primary/10 border-accent-primary/30 text-accent-primary' :
+                            talent.reputationScore >= 50 ? 'bg-accent-warning/10 border-accent-warning/30 text-accent-warning' :
+                            'bg-accent-danger/10 border-accent-danger/30 text-accent-danger'
+                        }`}>
+                            {talent.reputationScore}/100
+                        </div>
+                    )}
+                    <Link
+                        href={`/talents/${talent.id}`}
+                        className="p-2 glass hover:bg-white/10 rounded-lg transition-colors group/link"
+                    >
+                        <ExternalLink className="w-4 h-4 text-accent-primary group-hover/link:scale-110 transition-transform" />
+                    </Link>
+                </div>
             </div>
 
             <p className="text-sm text-foreground/70 mb-6 line-clamp-2 min-h-[2.5rem] leading-relaxed">

@@ -11,6 +11,20 @@ service cloud.firestore {
       allow create, update: if request.auth != null && request.auth.uid == userId;
       allow delete: if request.auth != null
         && (request.auth.uid == userId || isAdmin());
+
+      // Reviews subcollection
+      match /reviews/{reviewerId} {
+        allow read: if true;
+        // Doc ID = reviewerId, so a user can only write their own review
+        // Cannot review yourself
+        allow create: if request.auth != null
+          && request.auth.uid == reviewerId
+          && request.auth.uid != userId;
+        allow update: if request.auth != null
+          && request.auth.uid == reviewerId;
+        allow delete: if request.auth != null
+          && (request.auth.uid == reviewerId || isAdmin());
+      }
     }
 
     // ─── Jobs ─────────────────────────────────────────────────────────────────

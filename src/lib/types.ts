@@ -43,6 +43,19 @@ export interface TalentProfile {
     cvBoosted?: boolean;
     cvBoostExpiry?: string;
     openToWork?: boolean;
+    reputationScore?: number;   // 0–100, stored for quick display on cards
+    reviewCount?: number;
+}
+
+export interface Review {
+    id: string;            // = reviewerId (one review per person per talent)
+    reviewerId: string;
+    reviewerName: string;
+    reviewerPhotoUrl?: string;
+    reviewerUsername?: string;
+    rating: number;        // 1–5
+    text: string;
+    createdAt?: any;
 }
 
 export interface JobPosting {
