@@ -101,6 +101,7 @@ export interface Airdrop {
     difficulty: 'Easy' | 'Medium' | 'Hard';
     participationCount: string;
     tasks: string[]; // Simplified to string[] for the checklist UI
+    taskImages?: string[]; // Optional screenshot per task (parallel array)
     featured?: boolean;
     createdAt?: any;
     paymentStatus?: 'pending' | 'verified' | 'rejected';

@@ -7,7 +7,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAppContext } from '@/context/AppContext';
 import AuthGuard from '@/components/auth/AuthGuard';
 import PaymentModal from '@/components/PaymentModal';
-import { Sparkles, Globe, ArrowRight, CheckCircle2, List, Plus, Trash2, AlertTriangle, ImagePlus, X, Clock } from 'lucide-react';
+import { Sparkles, Globe, ArrowRight, CheckCircle2, List, Plus, Trash2, AlertTriangle, ImagePlus, X } from 'lucide-react';
 import { PRICES } from '@/lib/payments';
 
 export default function SubmitAirdropPage() {
@@ -23,6 +23,7 @@ function SubmitAirdropForm() {
     const { user } = useAppContext();
     const [loading, setLoading] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [uploadingStepImage, setUploadingStepImage] = useState<Record<number, boolean>>({});
     const [success, setSuccess] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
 
@@ -38,7 +39,8 @@ function SubmitAirdropForm() {
         fundingAmount: '',
         potentialReward: '',
         description: '',
-        tasks: ['Follow Twitter', 'Join Discord'] as string[]
+        tasks: ['Follow Twitter', 'Join Discord'] as string[],
+        taskImages: ['', ''] as string[],
     });
 
     const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,10 +77,36 @@ function SubmitAirdropForm() {
         }
     };
 
-    const addTask = () => setFormData({ ...formData, tasks: [...formData.tasks, ''] });
+    const handleStepImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) { alert('Please upload an image.'); return; }
+        if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB.'); return; }
+        setUploadingStepImage(prev => ({ ...prev, [index]: true }));
+        try {
+            const data = new FormData();
+            data.append('file', file);
+            const res = await fetch('/api/upload', { method: 'POST', body: data });
+            if (!res.ok) throw new Error('Upload failed');
+            const { url } = await res.json();
+            const newImages = [...formData.taskImages];
+            newImages[index] = url;
+            setFormData(prev => ({ ...prev, taskImages: newImages }));
+        } catch {
+            alert('Failed to upload screenshot. Please try again.');
+        } finally {
+            setUploadingStepImage(prev => ({ ...prev, [index]: false }));
+            e.target.value = '';
+        }
+    };
+
+    const addTask = () => setFormData({ ...formData, tasks: [...formData.tasks, ''], taskImages: [...formData.taskImages, ''] });
     const removeTask = (index: number) => {
-        const newTasks = formData.tasks.filter((_, i) => i !== index);
-        setFormData({ ...formData, tasks: newTasks });
+        setFormData({
+            ...formData,
+            tasks: formData.tasks.filter((_, i) => i !== index),
+            taskImages: formData.taskImages.filter((_, i) => i !== index),
+        });
     };
     const updateTask = (index: number, val: string) => {
         const newTasks = [...formData.tasks];
@@ -133,11 +161,11 @@ function SubmitAirdropForm() {
                 <div className="w-20 h-20 rounded-full bg-accent-success/20 flex items-center justify-center mx-auto mb-8">
                     <CheckCircle2 className="w-10 h-10 text-accent-success" />
                 </div>
-                <h1 className="text-4xl font-black uppercase tracking-tight">Payment Submitted!</h1>
-                <p className="text-foreground/60 text-lg">Your airdrop will go live within 24h after payment is verified.</p>
-                <div className="flex items-center justify-center gap-2 text-accent-warning text-sm font-bold">
-                    <Clock className="w-4 h-4" />
-                    <span>Awaiting payment verification</span>
+                <h1 className="text-4xl font-black uppercase tracking-tight">Airdrop is Live!</h1>
+                <p className="text-foreground/60 text-lg">Your airdrop has been verified on-chain and is live for the community.</p>
+                <div className="flex items-center justify-center gap-2 text-accent-success text-sm font-bold">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Verified instantly on Base</span>
                 </div>
                 <button
                     onClick={() => router.push('/airdrops')}
@@ -345,25 +373,45 @@ function SubmitAirdropForm() {
                             <Plus className="w-3 h-3" /> Add Task
                         </button>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {formData.tasks.map((task, idx) => (
-                            <div key={idx} className="flex gap-2">
-                                <input
-                                    required
-                                    type="text"
-                                    placeholder="Task description..."
-                                    value={task}
-                                    onChange={e => updateTask(idx, e.target.value)}
-                                    className="flex-grow glass bg-white/5 border-white/10 px-4 py-3 rounded-xl focus:border-accent-success/50 outline-none transition-all font-medium text-sm"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => removeTask(idx)}
-                                    disabled={formData.tasks.length <= 1}
-                                    className="p-3 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                            <div key={idx} className="glass p-4 space-y-3">
+                                <div className="flex gap-2 items-center">
+                                    <span className="text-[10px] font-black text-foreground/30 w-5 shrink-0">{idx + 1}</span>
+                                    <input
+                                        required
+                                        type="text"
+                                        placeholder="Step description..."
+                                        value={task}
+                                        onChange={e => updateTask(idx, e.target.value)}
+                                        className="flex-grow glass bg-white/5 border-white/10 px-4 py-2.5 rounded-xl focus:border-accent-success/50 outline-none transition-all font-medium text-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => removeTask(idx)}
+                                        disabled={formData.tasks.length <= 1}
+                                        className="p-2 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0 shrink-0"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                {/* Screenshot upload for this step */}
+                                {formData.taskImages[idx] ? (
+                                    <div className="relative ml-7">
+                                        <img src={formData.taskImages[idx]} alt={`Step ${idx + 1}`} className="w-full max-h-48 object-cover rounded-xl border border-white/10" />
+                                        <button type="button"
+                                            onClick={() => { const imgs = [...formData.taskImages]; imgs[idx] = ''; setFormData(p => ({ ...p, taskImages: imgs })); }}
+                                            className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-lg hover:bg-accent-danger/80 transition-colors">
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className={`ml-7 flex items-center gap-2 px-3 py-2 glass bg-white/3 border border-dashed border-white/10 rounded-xl cursor-pointer hover:border-accent-success/30 transition-all text-[10px] font-bold text-foreground/30 uppercase tracking-widest ${uploadingStepImage[idx] ? 'opacity-50 pointer-events-none' : ''}`}>
+                                        <ImagePlus className="w-3.5 h-3.5" />
+                                        {uploadingStepImage[idx] ? 'Uploading...' : 'Add screenshot (optional)'}
+                                        <input type="file" accept="image/*" onChange={e => handleStepImageUpload(idx, e)} className="hidden" />
+                                    </label>
+                                )}
                             </div>
                         ))}
                     </div>

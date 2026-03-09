@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
 import { db } from '@/lib/firebase';
 import {
-    collection, getDocs, deleteDoc, doc, updateDoc, query, orderBy
+    collection, getDocs, deleteDoc, doc, updateDoc, query, orderBy, addDoc, serverTimestamp
 } from 'firebase/firestore';
 import { JobPosting, Airdrop, TalentProfile, PaymentRecord } from '@/lib/types';
 import {
@@ -23,7 +23,11 @@ import {
     CheckCircle2,
     XCircle,
     ExternalLink,
-    Clock
+    Clock,
+    Plus,
+    X,
+    ImagePlus,
+    List
 } from 'lucide-react';
 import { PAYMENT_LABELS, BASE_EXPLORER_TX } from '@/lib/payments';
 
@@ -41,6 +45,16 @@ export default function AdminDashboard() {
     const [airdrops, setAirdrops] = useState<Airdrop[]>([]);
     const [talents, setTalents] = useState<TalentProfile[]>([]);
     const [payments, setPayments] = useState<PaymentRecord[]>([]);
+    const [showAirdropForm, setShowAirdropForm] = useState(false);
+    const [airdropFormSubmitting, setAirdropFormSubmitting] = useState(false);
+    const [uploadingAdminLogo, setUploadingAdminLogo] = useState(false);
+    const [adminAirdropForm, setAdminAirdropForm] = useState({
+        projectName: '', website: '', twitter: '', logoUrl: '',
+        blockchain: '', difficulty: 'Medium', status: 'Live' as 'Live'|'Upcoming'|'Ended',
+        type: 'Confirmed' as 'Confirmed'|'Potential',
+        fundingAmount: '', potentialReward: '', description: '',
+        tasks: [''] as string[],
+    });
 
     useEffect(() => {
         if (!authLoading && !isLoggedIn) {
@@ -194,6 +208,41 @@ export default function AdminDashboard() {
         p.type?.toLowerCase().includes(search.toLowerCase())
     );
 
+    const handleAdminLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingAdminLogo(true);
+        try {
+            const data = new FormData();
+            data.append('file', file);
+            const res = await fetch('/api/upload', { method: 'POST', body: data });
+            const { url } = await res.json();
+            setAdminAirdropForm(p => ({ ...p, logoUrl: url }));
+        } catch { alert('Upload failed.'); }
+        finally { setUploadingAdminLogo(false); e.target.value = ''; }
+    };
+
+    const handleAdminPostAirdrop = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setAirdropFormSubmitting(true);
+        try {
+            await addDoc(collection(db, 'airdrops'), {
+                ...adminAirdropForm,
+                tasks: adminAirdropForm.tasks.filter(t => t.trim()),
+                submittedBy: user?.id,
+                participationCount: '0',
+                paymentStatus: 'verified',
+                isAdminPost: true,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+            setShowAirdropForm(false);
+            setAdminAirdropForm({ projectName: '', website: '', twitter: '', logoUrl: '', blockchain: '', difficulty: 'Medium', status: 'Live', type: 'Confirmed', fundingAmount: '', potentialReward: '', description: '', tasks: [''] });
+            fetchData();
+        } catch { alert('Failed to post airdrop.'); }
+        finally { setAirdropFormSubmitting(false); }
+    };
+
     const pendingCount = payments.filter(p => p.status === 'pending').length;
 
     if (loading) return (
@@ -316,6 +365,120 @@ export default function AdminDashboard() {
                     <p className="text-[10px] text-foreground/30 font-bold mt-1">USDC verified</p>
                 </div>
             </div>
+
+            {/* Admin: Post Airdrop */}
+            {activeTab === 'airdrops' && (
+                <div className="mb-6">
+                    <button
+                        onClick={() => setShowAirdropForm(f => !f)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-accent-secondary/10 border border-accent-secondary/30 text-accent-secondary text-xs font-black uppercase tracking-widest rounded-xl hover:bg-accent-secondary/20 transition-colors"
+                    >
+                        <Plus className="w-3.5 h-3.5" /> Post Airdrop (Admin — Free)
+                    </button>
+
+                    {showAirdropForm && (
+                        <form onSubmit={handleAdminPostAirdrop} className="mt-4 glass p-6 space-y-4 border border-accent-secondary/20">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs font-black uppercase tracking-widest text-accent-secondary flex items-center gap-2"><Sparkles className="w-3.5 h-3.5" /> New Airdrop Post</p>
+                                <button type="button" onClick={() => setShowAirdropForm(false)}><X className="w-4 h-4 text-foreground/30" /></button>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {[
+                                    { key: 'projectName', label: 'Project Name', placeholder: 'Berachain', required: true },
+                                    { key: 'blockchain', label: 'Blockchain', placeholder: 'Ethereum', required: true },
+                                    { key: 'website', label: 'Website', placeholder: 'https://...', required: true },
+                                    { key: 'twitter', label: 'Twitter', placeholder: '@handle', required: true },
+                                    { key: 'potentialReward', label: 'Reward', placeholder: '$1,000+', required: true },
+                                    { key: 'fundingAmount', label: 'Funding', placeholder: '$42M', required: false },
+                                ].map(({ key, label, placeholder, required }) => (
+                                    <div key={key} className="space-y-1">
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30">{label}</label>
+                                        <input required={required} type="text" placeholder={placeholder}
+                                            value={(adminAirdropForm as any)[key]}
+                                            onChange={e => setAdminAirdropForm(p => ({ ...p, [key]: e.target.value }))}
+                                            className="w-full glass bg-white/5 border-white/10 px-3 py-2.5 rounded-xl text-sm font-medium outline-none focus:border-accent-secondary/50" />
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30">Status</label>
+                                    <select value={adminAirdropForm.status} onChange={e => setAdminAirdropForm(p => ({ ...p, status: e.target.value as any }))}
+                                        className="w-full glass bg-white/5 border-white/10 px-3 py-2.5 rounded-xl text-xs font-bold outline-none uppercase">
+                                        <option value="Live">Live</option>
+                                        <option value="Upcoming">Upcoming</option>
+                                        <option value="Ended">Ended</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30">Type</label>
+                                    <select value={adminAirdropForm.type} onChange={e => setAdminAirdropForm(p => ({ ...p, type: e.target.value as any }))}
+                                        className="w-full glass bg-white/5 border-white/10 px-3 py-2.5 rounded-xl text-xs font-bold outline-none uppercase">
+                                        <option value="Confirmed">Confirmed</option>
+                                        <option value="Potential">Potential</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30">Difficulty</label>
+                                    <select value={adminAirdropForm.difficulty} onChange={e => setAdminAirdropForm(p => ({ ...p, difficulty: e.target.value }))}
+                                        className="w-full glass bg-white/5 border-white/10 px-3 py-2.5 rounded-xl text-xs font-bold outline-none uppercase">
+                                        <option value="Easy">Easy</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="Hard">Hard</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Logo */}
+                            <div className="flex items-center gap-3">
+                                {adminAirdropForm.logoUrl && <img src={adminAirdropForm.logoUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />}
+                                <label className={`flex items-center gap-2 px-4 py-2.5 glass bg-white/5 border-white/10 rounded-xl cursor-pointer hover:border-accent-secondary/30 text-xs font-bold text-foreground/40 ${uploadingAdminLogo ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    <ImagePlus className="w-3.5 h-3.5" /> {uploadingAdminLogo ? 'Uploading...' : 'Upload Logo'}
+                                    <input type="file" accept="image/*" onChange={handleAdminLogoUpload} className="hidden" />
+                                </label>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30">Description</label>
+                                <textarea required rows={2} value={adminAirdropForm.description}
+                                    onChange={e => setAdminAirdropForm(p => ({ ...p, description: e.target.value }))}
+                                    placeholder="Why should people participate?"
+                                    className="w-full glass bg-white/5 border-white/10 px-3 py-2.5 rounded-xl text-sm font-medium outline-none resize-none focus:border-accent-secondary/50" />
+                            </div>
+
+                            {/* Tasks */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30 flex items-center gap-1.5"><List className="w-3 h-3" /> Steps</label>
+                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, ''] }))}
+                                        className="text-[10px] font-black text-accent-secondary uppercase tracking-widest flex items-center gap-1">
+                                        <Plus className="w-3 h-3" /> Add
+                                    </button>
+                                </div>
+                                {adminAirdropForm.tasks.map((task, idx) => (
+                                    <div key={idx} className="flex gap-2">
+                                        <input type="text" value={task} placeholder={`Step ${idx + 1}`}
+                                            onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = e.target.value; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
+                                            className="flex-grow glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-sm font-medium outline-none focus:border-accent-secondary/50" />
+                                        <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: p.tasks.filter((_, i) => i !== idx) }))}
+                                            disabled={adminAirdropForm.tasks.length <= 1}
+                                            className="p-2 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button type="submit" disabled={airdropFormSubmitting}
+                                className="w-full py-3 bg-accent-secondary text-white font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition-all disabled:opacity-50">
+                                {airdropFormSubmitting ? 'Posting...' : 'Post Airdrop (Live Instantly)'}
+                            </button>
+                        </form>
+                    )}
+                </div>
+            )}
 
             {/* Search Bar */}
             <div className="relative mb-6">
