@@ -39,10 +39,24 @@ service cloud.firestore {
         && (resource.data.submittedBy == request.auth.uid || isAdmin());
     }
 
+    // ─── Payments ─────────────────────────────────────────────────────────────
+    match /payments/{paymentId} {
+      allow read: if request.auth != null
+        && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && isAdmin();
+    }
+
+    // ─── Users ────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAdmin();
+    }
+
     // ─── Helper: Admin check ──────────────────────────────────────────────────
     function isAdmin() {
       return request.auth != null
-        && get(/databases/$(database)/documents/talents/$(request.auth.uid)).data.isAdmin == true;
+        && request.auth.uid == '8QlMg7xGGrWeJKW6WnEUF5OQUb53';
     }
   }
 }

@@ -3,7 +3,8 @@
 import { useAppContext } from '@/context/AppContext';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { checkBadgePromo } from '@/lib/promos';
 import { JobPosting, Airdrop } from '@/lib/types';
 import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
@@ -27,6 +28,17 @@ function DashboardContent() {
     const [showBadgeModal, setShowBadgeModal] = useState(false);
     const [showBoostModal, setShowBoostModal] = useState(false);
     const [paymentLoading, setPaymentLoading] = useState(false);
+    const [isBadgePromoFree, setIsBadgePromoFree] = useState(false);
+    const [badgesRemaining, setBadgesRemaining] = useState(0);
+
+    useEffect(() => {
+        if (!user?.hasBadge && !user?.hasBadgePending) {
+            checkBadgePromo().then(({ isFree, remaining }) => {
+                setIsBadgePromoFree(isFree);
+                setBadgesRemaining(remaining);
+            });
+        }
+    }, [user?.id]);
 
     useEffect(() => {
         async function fetchSaved() {
@@ -63,6 +75,19 @@ function DashboardContent() {
     // Compute profile completion %
     const profileFields = [user?.displayName, user?.bio, user?.walletAddress, user?.roles?.length, user?.skills?.length, user?.resumeUrl];
     const profilePct = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100);
+
+    const handleFreeBadge = async () => {
+        if (!user?.id) return;
+        setPaymentLoading(true);
+        try {
+            await updateDoc(doc(db, 'talents', user.id), { hasBadge: true });
+            updateProfile({ hasBadge: true } as any);
+        } catch (err) {
+            alert('Failed to activate badge. Please try again.');
+        } finally {
+            setPaymentLoading(false);
+        }
+    };
 
     const handleBadgePayment = async (txHash: string) => {
         if (!user?.id) return;
@@ -163,11 +188,15 @@ function DashboardContent() {
                             </div>
                         ) : (
                             <button
-                                onClick={() => setShowBadgeModal(true)}
-                                className="w-full flex items-center justify-between px-3 py-2.5 bg-accent-primary/10 border border-accent-primary/20 text-accent-primary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent-primary/20 transition-colors"
+                                onClick={() => isBadgePromoFree ? handleFreeBadge() : setShowBadgeModal(true)}
+                                disabled={paymentLoading}
+                                className="w-full flex items-center justify-between px-3 py-2.5 bg-accent-primary/10 border border-accent-primary/20 text-accent-primary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent-primary/20 transition-colors disabled:opacity-50"
                             >
                                 <span className="flex items-center gap-2"><Lock className="w-3 h-3" /> Get Badge</span>
-                                <span>${PRICES.USER_BADGE} USDC</span>
+                                {isBadgePromoFree
+                                    ? <span className="text-accent-success">FREE ({badgesRemaining} left)</span>
+                                    : <span>${PRICES.USER_BADGE} USDC</span>
+                                }
                             </button>
                         )}
 

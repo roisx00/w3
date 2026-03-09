@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAppContext } from '@/context/AppContext';
 import AuthGuard from '@/components/auth/AuthGuard';
 import PaymentModal from '@/components/PaymentModal';
-import { Briefcase, DollarSign, Globe, ArrowRight, CheckCircle2, AlertCircle, ImagePlus, X, Clock } from 'lucide-react';
+import { Briefcase, DollarSign, Globe, ArrowRight, CheckCircle2, AlertCircle, ImagePlus, X, Clock, Zap } from 'lucide-react';
 import { PRICES } from '@/lib/payments';
+import { checkJobPromo } from '@/lib/promos';
 
 export default function PostJobPage() {
     return (
@@ -24,7 +25,17 @@ function PostJobForm() {
     const [loading, setLoading] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [success, setSuccess] = useState(false);
+    const [successFree, setSuccessFree] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [isPromoFree, setIsPromoFree] = useState(false);
+    const [jobsRemaining, setJobsRemaining] = useState(0);
+
+    useEffect(() => {
+        checkJobPromo().then(({ isFree, remaining }) => {
+            setIsPromoFree(isFree);
+            setJobsRemaining(remaining);
+        });
+    }, []);
 
     const [formData, setFormData] = useState({
         projectName: '',
@@ -79,7 +90,33 @@ function PostJobForm() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setShowPaymentModal(true);
+        if (isPromoFree) {
+            handleFreePost();
+        } else {
+            setShowPaymentModal(true);
+        }
+    };
+
+    const handleFreePost = async () => {
+        setLoading(true);
+        try {
+            await addDoc(collection(db, 'jobs'), {
+                ...formData,
+                postedBy: user?.id,
+                status: 'Open',
+                paymentStatus: 'verified',
+                isFree: true,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+            setSuccessFree(true);
+            setSuccess(true);
+        } catch (err) {
+            console.error('Error posting job:', err);
+            alert('Failed to post job. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handlePaymentConfirm = async (txHash: string) => {
@@ -124,12 +161,25 @@ function PostJobForm() {
                 <div className="w-20 h-20 rounded-full bg-accent-success/20 flex items-center justify-center mx-auto mb-8">
                     <CheckCircle2 className="w-10 h-10 text-accent-success" />
                 </div>
-                <h1 className="text-4xl font-black uppercase tracking-tight">Payment Submitted!</h1>
-                <p className="text-foreground/60 text-lg">Your listing is under review and will go live within 24h after payment is verified.</p>
-                <div className="flex items-center justify-center gap-2 text-accent-warning text-sm font-bold">
-                    <Clock className="w-4 h-4" />
-                    <span>Awaiting payment verification</span>
-                </div>
+                {successFree ? (
+                    <>
+                        <h1 className="text-4xl font-black uppercase tracking-tight">Your Job is Live!</h1>
+                        <p className="text-foreground/60 text-lg">Posted free during our launch promo. Talent can apply now.</p>
+                        <div className="flex items-center justify-center gap-2 text-accent-success text-sm font-bold">
+                            <Zap className="w-4 h-4" />
+                            <span>Live instantly — no payment needed</span>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <h1 className="text-4xl font-black uppercase tracking-tight">Payment Submitted!</h1>
+                        <p className="text-foreground/60 text-lg">Your listing is under review and will go live within 24h after payment is verified.</p>
+                        <div className="flex items-center justify-center gap-2 text-accent-warning text-sm font-bold">
+                            <Clock className="w-4 h-4" />
+                            <span>Awaiting payment verification</span>
+                        </div>
+                    </>
+                )}
                 <button
                     onClick={() => router.push('/jobs')}
                     className="mt-4 px-8 py-3 bg-foreground text-background font-black rounded-xl hover:scale-105 transition-all text-xs uppercase tracking-widest"
@@ -145,9 +195,15 @@ function PostJobForm() {
             <header className="mb-12">
                 <h1 className="text-4xl font-black uppercase tracking-tight mb-4">Post a <span className="text-accent-primary">Job</span></h1>
                 <p className="text-foreground/40 font-medium">Find the elite talent your project deserves.</p>
-                <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-accent-success/10 border border-accent-success/20 rounded-xl text-accent-success text-xs font-bold">
-                    <CheckCircle2 className="w-4 h-4" /> ${PRICES.JOB_POST} USDC one-time listing fee · Pay at checkout
-                </div>
+                {isPromoFree ? (
+                    <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-accent-primary/10 border border-accent-primary/30 rounded-xl text-accent-primary text-xs font-bold">
+                        <Zap className="w-4 h-4" /> FREE during launch — {jobsRemaining} of 50 free spots remaining
+                    </div>
+                ) : (
+                    <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-accent-success/10 border border-accent-success/20 rounded-xl text-accent-success text-xs font-bold">
+                        <CheckCircle2 className="w-4 h-4" /> ${PRICES.JOB_POST} USDC one-time listing fee · Pay at checkout
+                    </div>
+                )}
             </header>
 
             <form onSubmit={handleSubmit} className="space-y-8">
@@ -362,7 +418,10 @@ function PostJobForm() {
                 <div className="flex items-center gap-4 bg-accent-primary/5 border border-accent-primary/20 p-6 rounded-2xl">
                     <AlertCircle className="w-6 h-6 text-accent-primary shrink-0" />
                     <p className="text-xs text-foreground/60 leading-relaxed">
-                        By posting this job, you agree to our terms. All listings are subject to verification. Payment of <strong>${PRICES.JOB_POST} USDC</strong> is required at checkout.
+                        {isPromoFree
+                            ? `By posting this job, you agree to our terms. This listing is FREE during our launch promo (${jobsRemaining} spots left). Normal price is $${PRICES.JOB_POST} USDC after promo ends.`
+                            : `By posting this job, you agree to our terms. All listings are subject to verification. Payment of $${PRICES.JOB_POST} USDC is required at checkout.`
+                        }
                     </p>
                 </div>
 
@@ -376,11 +435,11 @@ function PostJobForm() {
                     </button>
                     <button
                         type="submit"
-                        disabled={uploadingLogo}
+                        disabled={uploadingLogo || loading}
                         className="px-12 py-4 bg-foreground text-background font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-3 disabled:opacity-50"
                     >
-                        CONTINUE TO PAYMENT
-                        <ArrowRight className="w-4 h-4" />
+                        {isPromoFree ? 'POST FOR FREE' : 'CONTINUE TO PAYMENT'}
+                        {isPromoFree ? <Zap className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
                     </button>
                 </div>
             </form>
