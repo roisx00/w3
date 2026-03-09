@@ -248,7 +248,7 @@ export default function AdminDashboard() {
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-12">
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                 <div>
                     <div className="flex items-center gap-3 text-accent-primary mb-2">
                         <LayoutDashboard className="w-5 h-5" />
@@ -290,6 +290,32 @@ export default function AdminDashboard() {
                     </button>
                 </div>
             </header>
+
+            {/* Stat Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div className="glass p-5 border-accent-warning/20 bg-accent-warning/5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-accent-warning mb-1">Pending</p>
+                    <p className="text-3xl font-black text-accent-warning">{pendingCount}</p>
+                    <p className="text-[10px] text-foreground/30 font-bold mt-1">Payments to review</p>
+                </div>
+                <div className="glass p-5 border-accent-primary/20 bg-accent-primary/5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-accent-primary mb-1">Talent</p>
+                    <p className="text-3xl font-black text-accent-primary">{talents.length}</p>
+                    <p className="text-[10px] text-foreground/30 font-bold mt-1">Registered users</p>
+                </div>
+                <div className="glass p-5 border-accent-success/20 bg-accent-success/5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-accent-success mb-1">Jobs</p>
+                    <p className="text-3xl font-black text-accent-success">{jobs.length}</p>
+                    <p className="text-[10px] text-foreground/30 font-bold mt-1">Total listings</p>
+                </div>
+                <div className="glass p-5 border-accent-secondary/20 bg-accent-secondary/5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-accent-secondary mb-1">Revenue</p>
+                    <p className="text-3xl font-black text-accent-secondary">
+                        ${payments.filter(p => p.status === 'verified').reduce((sum, p) => sum + (p.amount || 0), 0)}
+                    </p>
+                    <p className="text-[10px] text-foreground/30 font-bold mt-1">USDC verified</p>
+                </div>
+            </div>
 
             {/* Search Bar */}
             <div className="relative mb-6">
@@ -576,10 +602,23 @@ export default function AdminDashboard() {
                 </table>
 
                 {activeCount === 0 && (
-                    <div className="py-20 text-center">
-                        <p className="text-foreground/40 font-medium">
-                            {search ? `No results for "${search}"` : `No records found in this sector.`}
+                    <div className="py-20 text-center space-y-3">
+                        <p className="text-2xl font-black text-foreground/10 uppercase tracking-widest">Empty</p>
+                        <p className="text-foreground/30 text-sm font-medium">
+                            {search
+                                ? `No results for "${search}"`
+                                : activeTab === 'users'
+                                    ? 'No talent profiles yet. Users must complete onboarding to appear here.'
+                                    : activeTab === 'payments'
+                                        ? 'No payments yet. They will appear here when users submit.'
+                                        : `No ${activeTab} yet.`
+                            }
                         </p>
+                        {!search && activeTab === 'users' && (
+                            <p className="text-[10px] text-foreground/20 font-bold uppercase tracking-widest">
+                                Tip: Ask users to complete /onboarding to create their profile
+                            </p>
+                        )}
                     </div>
                 )}
             </div>
