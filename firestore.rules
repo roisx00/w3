@@ -70,7 +70,8 @@ service cloud.firestore {
     // ─── Helper: Admin check ──────────────────────────────────────────────────
     function isAdmin() {
       return request.auth != null
-        && request.auth.uid == '8QlMg7xGGrWeJKW6WnEUF5OQUb53';
+        && (request.auth.uid == '8QlMg7xGGrWeJKW6WnEUF5OQUb53'
+            || request.auth.token.email == 'roisx00@gmail.com');
     }
   }
 }
