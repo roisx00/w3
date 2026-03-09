@@ -42,6 +42,7 @@ export interface TalentProfile {
     badgeTxHash?: string;
     cvBoosted?: boolean;
     cvBoostExpiry?: string;
+    openToWork?: boolean;
 }
 
 export interface JobPosting {

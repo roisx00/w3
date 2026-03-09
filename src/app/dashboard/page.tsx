@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { checkBadgePromo } from '@/lib/promos';
 import { JobPosting, Airdrop } from '@/lib/types';
-import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock } from 'lucide-react';
+import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import { PRICES } from '@/lib/payments';
 import Link from 'next/link';
@@ -216,6 +216,29 @@ function DashboardContent() {
                                 <span>${PRICES.CV_BOOST_MONTHLY}/mo</span>
                             </button>
                         )}
+
+                        {/* Open to Work toggle */}
+                        <div className="pt-1 border-t border-white/5">
+                            <button
+                                onClick={() => updateProfile({ openToWork: !user?.openToWork } as any)}
+                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    user?.openToWork
+                                        ? 'bg-accent-success/10 border border-accent-success/30 text-accent-success'
+                                        : 'bg-white/5 border border-white/10 text-foreground/40 hover:border-white/20'
+                                }`}
+                            >
+                                <span className="flex items-center gap-2">
+                                    <Radio className="w-3 h-3" />
+                                    {user?.openToWork ? 'Open to Work' : 'Not Looking'}
+                                </span>
+                                <div className={`w-8 h-4 rounded-full transition-colors relative ${user?.openToWork ? 'bg-accent-success' : 'bg-white/10'}`}>
+                                    <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${user?.openToWork ? 'left-4' : 'left-0.5'}`} />
+                                </div>
+                            </button>
+                            <p className="text-[9px] text-foreground/20 font-medium mt-1.5 px-1">
+                                {user?.openToWork ? 'Projects can see you\'re available for hire' : 'Toggle on to signal you\'re available'}
+                            </p>
+                        </div>
                     </div>
                 </aside>
 

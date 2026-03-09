@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { TalentProfile } from '@/lib/types';
 import TalentCard from '@/components/TalentCard';
-import { Users, UserPlus, Search } from 'lucide-react';
+import { Users, UserPlus, Search, Radio } from 'lucide-react';
 import Link from 'next/link';
 
 const PAGE_SIZE = 12;
@@ -14,6 +14,7 @@ export default function TalentsPage() {
     const [talents, setTalents] = useState<TalentProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [filterOpenToWork, setFilterOpenToWork] = useState(false);
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
     useEffect(() => {
@@ -46,14 +47,15 @@ export default function TalentsPage() {
         setVisibleCount(PAGE_SIZE);
     }, [search]);
 
-    const filtered = talents.filter(talent =>
-        !search ||
-        talent.displayName?.toLowerCase().includes(search.toLowerCase()) ||
-        talent.username?.toLowerCase().includes(search.toLowerCase()) ||
-        talent.bio?.toLowerCase().includes(search.toLowerCase()) ||
-        talent.roles?.some(r => r.toLowerCase().includes(search.toLowerCase())) ||
-        talent.skills?.some(s => s.toLowerCase().includes(search.toLowerCase()))
-    );
+    const filtered = talents.filter(talent => {
+        if (filterOpenToWork && !talent.openToWork) return false;
+        return !search ||
+            talent.displayName?.toLowerCase().includes(search.toLowerCase()) ||
+            talent.username?.toLowerCase().includes(search.toLowerCase()) ||
+            talent.bio?.toLowerCase().includes(search.toLowerCase()) ||
+            talent.roles?.some(r => r.toLowerCase().includes(search.toLowerCase())) ||
+            talent.skills?.some(s => s.toLowerCase().includes(search.toLowerCase()));
+    });
 
     const visible = filtered.slice(0, visibleCount);
     const hasMore = visibleCount < filtered.length;
@@ -92,6 +94,17 @@ export default function TalentsPage() {
                             className="w-full bg-white/5 border border-white/5 rounded-xl pl-12 pr-4 py-4 outline-none focus:border-accent-primary/30 transition-colors font-medium"
                         />
                     </div>
+                    <button
+                        onClick={() => setFilterOpenToWork(f => !f)}
+                        className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shrink-0 ${
+                            filterOpenToWork
+                                ? 'bg-accent-success/15 border border-accent-success/40 text-accent-success'
+                                : 'bg-white/5 border border-white/5 text-foreground/40 hover:border-white/10'
+                        }`}
+                    >
+                        <Radio className="w-3.5 h-3.5" />
+                        Open to Work
+                    </button>
                 </div>
             </header>
 
