@@ -3,7 +3,7 @@
 import { useAppContext } from '@/context/AppContext';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { checkBadgePromo } from '@/lib/promos';
 import { JobPosting, Airdrop } from '@/lib/types';
 import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio } from 'lucide-react';
@@ -30,6 +30,19 @@ function DashboardContent() {
     const [paymentLoading, setPaymentLoading] = useState(false);
     const [isBadgePromoFree, setIsBadgePromoFree] = useState(false);
     const [badgesRemaining, setBadgesRemaining] = useState(0);
+    const [applications, setApplications] = useState<any[]>([]);
+
+    // Fetch applications received for jobs this user posted
+    useEffect(() => {
+        if (!user?.id) return;
+        getDocs(query(
+            collection(db, 'applications'),
+            where('posterId', '==', user.id),
+            orderBy('createdAt', 'desc')
+        )).then(snap => {
+            setApplications(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        }).catch(() => {}); // index may not exist yet — silent fail
+    }, [user?.id]);
 
     useEffect(() => {
         if (!user?.hasBadge && !user?.hasBadgePending) {
@@ -315,6 +328,41 @@ function DashboardContent() {
                                 )}
                             </div>
                         </section>
+
+                        {/* Applications Received */}
+                        {applications.length > 0 && (
+                            <section>
+                                <h4 className="font-display font-black text-xl mb-6 flex items-center gap-3">
+                                    Applications Received
+                                    <span className="px-2 py-0.5 bg-accent-primary/10 text-accent-primary text-[10px] rounded font-black">{applications.length}</span>
+                                </h4>
+                                <div className="space-y-3">
+                                    {applications.map((app: any) => (
+                                        <div key={app.id} className="glass p-5 space-y-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center font-bold text-accent-primary text-sm overflow-hidden shrink-0">
+                                                        {app.applicantPhotoUrl
+                                                            ? <img src={app.applicantPhotoUrl} alt="" className="w-full h-full object-cover" />
+                                                            : app.applicantName?.charAt(0)
+                                                        }
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-sm">{app.applicantName}</p>
+                                                        <p className="text-[10px] text-foreground/40">@{app.applicantUsername} · {app.jobTitle} @ {app.projectName}</p>
+                                                    </div>
+                                                </div>
+                                                <Link href={app.cvLink} target="_blank"
+                                                    className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-accent-primary/10 border border-accent-primary/20 text-accent-primary rounded-lg hover:bg-accent-primary/20 transition-colors shrink-0">
+                                                    View CV
+                                                </Link>
+                                            </div>
+                                            <p className="text-sm text-foreground/60 leading-relaxed pl-12">{app.coverNote}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
                     </div>
                 </main>
             </div>

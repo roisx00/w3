@@ -10,11 +10,15 @@ import {
     ShieldCheck, Info, CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
+import ApplyModal from '@/components/ApplyModal';
+import { useAppContext } from '@/context/AppContext';
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const { user, isLoggedIn } = useAppContext();
     const [job, setJob] = useState<JobPosting | null>(null);
     const [loading, setLoading] = useState(true);
+    const [showApplyModal, setShowApplyModal] = useState(false);
 
     useEffect(() => {
         async function fetchJob() {
@@ -145,18 +149,25 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         <div className="mb-8">
                             <h3 className="font-display font-black text-xl mb-4">Ready to Apply?</h3>
                             <p className="text-xs text-foreground/40 leading-relaxed mb-6">
-                                Your Web3 Hub profile will be shared with the project team along with your application.
+                                Your CV is auto-attached. Write a short note on why you're the right fit and send it directly to {job.projectName}.
                             </p>
-                            {(job.twitter || job.website) && (
-                                <a
-                                    href={job.twitter ? `https://twitter.com/${job.twitter.replace('@', '')}` : job.website}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="w-full py-4 bg-foreground text-background font-black rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-3"
-                                >
-                                    {job.twitter ? 'APPLY VIA TWITTER' : 'VISIT PROJECT SITE'}
-                                    <ArrowLeft className="w-4 h-4 rotate-180" />
-                                </a>
+                            {isLoggedIn ? (
+                                user?.id === job.postedBy ? (
+                                    <p className="text-xs text-foreground/30 font-bold text-center py-3">This is your listing</p>
+                                ) : (
+                                    <button
+                                        onClick={() => setShowApplyModal(true)}
+                                        className="w-full py-4 bg-accent-primary text-white font-black rounded-xl hover:bg-accent-secondary hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl flex items-center justify-center gap-3 text-sm uppercase tracking-widest"
+                                    >
+                                        Apply Now
+                                        <ArrowLeft className="w-4 h-4 rotate-180" />
+                                    </button>
+                                )
+                            ) : (
+                                <Link href="/onboarding"
+                                    className="w-full py-4 bg-foreground text-background font-black rounded-xl hover:scale-[1.02] transition-all shadow-xl flex items-center justify-center gap-3 text-sm uppercase tracking-widest">
+                                    Sign In to Apply
+                                </Link>
                             )}
                         </div>
 
@@ -194,6 +205,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     </div>
                 </aside>
             </div>
+
+            {job && (
+                <ApplyModal
+                    job={job}
+                    isOpen={showApplyModal}
+                    onClose={() => setShowApplyModal(false)}
+                />
+            )}
         </div>
     );
 }

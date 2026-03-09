@@ -114,15 +114,32 @@ export default function TalentDetailPage({ params }: { params: Promise<{ id: str
                                 {talent.verified && <ShieldCheck className="w-5 h-5 text-accent-primary" />}
                             </div>
                             <p className="text-foreground/40 text-sm font-medium mb-1">@{talent.username}</p>
-                            {talent.availability && (
-                                <span className={`inline-block text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full mt-2 ${
-                                    talent.availability === 'Full-time' ? 'bg-accent-success/10 text-accent-success border border-accent-success/20' :
-                                    talent.availability === 'Freelance' ? 'bg-accent-warning/10 text-accent-warning border border-accent-warning/20' :
-                                    'bg-white/5 text-foreground/40 border border-white/10'
-                                }`}>
-                                    {talent.availability}
-                                </span>
-                            )}
+                            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                                {talent.availability && (
+                                    <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                                        talent.availability === 'Full-time' ? 'bg-accent-success/10 text-accent-success border border-accent-success/20' :
+                                        talent.availability === 'Freelance' ? 'bg-accent-warning/10 text-accent-warning border border-accent-warning/20' :
+                                        'bg-white/5 text-foreground/40 border border-white/10'
+                                    }`}>
+                                        {talent.availability}
+                                    </span>
+                                )}
+                                {talent.openToWork && (
+                                    <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-accent-success/10 text-accent-success border border-accent-success/30 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-accent-success animate-pulse" />
+                                        Open to Work
+                                    </span>
+                                )}
+                                {talent.reputationScore != null && talent.reputationScore > 0 && (
+                                    <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${
+                                        talent.reputationScore >= 85 ? 'bg-accent-success/10 border-accent-success/30 text-accent-success' :
+                                        talent.reputationScore >= 70 ? 'bg-accent-primary/10 border-accent-primary/30 text-accent-primary' :
+                                        'bg-accent-warning/10 border-accent-warning/30 text-accent-warning'
+                                    }`}>
+                                        Score {talent.reputationScore}/100
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {/* Socials */}

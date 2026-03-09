@@ -204,6 +204,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (profile.badgeTxHash !== undefined) saveData.badgeTxHash = profile.badgeTxHash;
             if (profile.cvBoosted !== undefined) saveData.cvBoosted = profile.cvBoosted;
             if (profile.cvBoostExpiry !== undefined) saveData.cvBoostExpiry = profile.cvBoostExpiry;
+            if (profile.openToWork !== undefined) saveData.openToWork = profile.openToWork;
             await setDoc(doc(db, 'talents', firebaseUser.uid), saveData, { merge: true });
         } catch (e) {
             console.error("Firestore sync error:", e);
