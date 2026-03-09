@@ -1,5 +1,6 @@
-import { ArrowRight, Briefcase, Sparkles, Users, Zap, ArrowUpRight } from 'lucide-react';
+import { Briefcase, Sparkles, Users, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
+import StatsBar from '@/components/StatsBar';
 
 export default function Home() {
   return (
@@ -45,6 +46,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Live Stats */}
+      <StatsBar />
 
       {/* Stats / Features Grid */}
       <section className="max-w-7xl mx-auto px-6 py-20 border-t border-white/5">
