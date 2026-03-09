@@ -7,7 +7,7 @@ import { TalentProfile } from '@/lib/types';
 import ReviewSection from '@/components/ReviewSection';
 import {
     Send, Briefcase, Calendar, Award, ChevronLeft, CheckCircle2,
-    Copy, Link as LinkIcon, ShieldCheck, MessageSquare, Share2, Zap
+    Copy, Link as LinkIcon, ShieldCheck, MessageSquare, Share2, Zap, BadgeCheck
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -109,6 +109,7 @@ export default function TalentDetailPage({ params }: { params: Promise<{ id: str
                             </div>
                             <div className="flex items-center justify-center gap-2 mb-1">
                                 <h1 className="font-display font-black text-2xl tracking-tight">{talent.displayName}</h1>
+                                {talent.hasBadge && <BadgeCheck className="w-5 h-5 text-yellow-400" />}
                                 {talent.verified && <ShieldCheck className="w-5 h-5 text-accent-primary" />}
                             </div>
                             <p className="text-foreground/40 text-sm font-medium mb-1">@{talent.username}</p>

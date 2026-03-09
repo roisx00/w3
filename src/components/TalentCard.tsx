@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { TalentProfile } from '@/lib/types';
-import { Twitter, Send, Github, Globe, MapPin, Briefcase, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Twitter, Send, Github, Globe, MapPin, Briefcase, ExternalLink, CheckCircle2, BadgeCheck } from 'lucide-react';
 import Link from 'next/link';
 
 interface TalentCardProps {
@@ -40,6 +40,9 @@ const TalentCard = ({ talent }: TalentCardProps) => {
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-display font-bold text-lg leading-none">{talent.displayName}</h3>
+                            {talent.hasBadge && (
+                                <BadgeCheck className="w-4 h-4 text-yellow-400 shrink-0" />
+                            )}
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-xs text-foreground/40 font-medium tracking-tight">@{talent.username}</span>

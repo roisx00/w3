@@ -6,6 +6,7 @@ import { ArrowRight, ArrowLeft, CheckCircle2, User, Briefcase, Award, Plus, Tras
 import { useAppContext } from '@/context/AppContext';
 import { UserRole, Experience } from '@/lib/types';
 import AuthGuard from '@/components/auth/AuthGuard';
+import { checkBadgePromo } from '@/lib/promos';
 
 const STEPS = [
     { id: 'basic', title: 'Identity', icon: User },
@@ -86,21 +87,32 @@ function OnboardingContent() {
         if (currentStep < STEPS.length - 1) {
             setCurrentStep(currentStep + 1);
         } else {
-            updateProfile({
-                username: formData.username,
-                displayName: formData.displayName,
-                bio: formData.bio,
-                walletAddress: formData.walletAddress,
-                availability: formData.availability,
-                socials: {
-                    ...(user?.socials || {}),
-                    twitter: formData.twitter || undefined,
-                },
-                roles: formData.roles,
-                skills: formData.skills,
-                experience: formData.experience,
-            } as any);
-            setDone(true);
+            // Auto-grant badge if launch promo is active and user doesn't have one
+            const getBadge = async () => {
+                if (!user?.hasBadge) {
+                    const { isFree } = await checkBadgePromo();
+                    return isFree;
+                }
+                return false;
+            };
+            getBadge().then(grantBadge => {
+                updateProfile({
+                    username: formData.username,
+                    displayName: formData.displayName,
+                    bio: formData.bio,
+                    walletAddress: formData.walletAddress,
+                    availability: formData.availability,
+                    socials: {
+                        ...(user?.socials || {}),
+                        twitter: formData.twitter || undefined,
+                    },
+                    roles: formData.roles,
+                    skills: formData.skills,
+                    experience: formData.experience,
+                    ...(grantBadge ? { hasBadge: true } : {}),
+                } as any);
+                setDone(true);
+            });
         }
     };
 
