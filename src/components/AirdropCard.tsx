@@ -95,12 +95,32 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
 
             {/* Task List Preview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                {(airdrop.tasks ?? []).slice(0, 3).map((task, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 group-hover:border-white/10 transition-colors">
-                        <div className="w-2 h-2 rounded-full bg-accent-secondary/40 shrink-0" />
-                        <span className="text-xs font-medium text-foreground/70 truncate">{typeof task === 'string' ? task : task.text}</span>
-                    </div>
-                ))}
+                {(airdrop.tasks ?? []).slice(0, 3).map((task, i) => {
+                    const text = typeof task === 'string' ? task : task.text;
+                    const url = typeof task === 'string' ? undefined : task.url;
+                    const linkText = typeof task === 'string' ? undefined : task.linkText;
+
+                    let renderedText: React.ReactNode = text;
+                    if (url && linkText && text.includes(linkText)) {
+                        const parts = text.split(linkText);
+                        renderedText = (
+                            <>
+                                {parts[0]}
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline relative z-10" onClick={(e) => e.stopPropagation()}>
+                                    {linkText}
+                                </a>
+                                {parts.slice(1).join(linkText)}
+                            </>
+                        );
+                    }
+
+                    return (
+                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 group-hover:border-white/10 transition-colors">
+                            <div className="w-2 h-2 rounded-full bg-accent-secondary/40 shrink-0" />
+                            <span className="text-xs font-medium text-foreground/70 truncate">{renderedText}</span>
+                        </div>
+                    );
+                })}
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-white/5">

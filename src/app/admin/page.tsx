@@ -54,11 +54,11 @@ export default function AdminDashboard() {
         blockchain: '', difficulty: 'Medium', status: 'Live' as 'Live' | 'Upcoming' | 'Ended',
         type: 'Confirmed' as 'Confirmed' | 'Potential',
         fundingAmount: '', potentialReward: '', description: '',
-        tasks: [{ text: '', url: '' }],
+        tasks: [{ text: '', url: '', linkText: '' }],
     });
 
     const resetAirdropForm = () => {
-        setAdminAirdropForm({ projectName: '', website: '', twitter: '', logoUrl: '', blockchain: '', difficulty: 'Medium', status: 'Live', type: 'Confirmed', fundingAmount: '', potentialReward: '', description: '', tasks: [{ text: '', url: '' }] });
+        setAdminAirdropForm({ projectName: '', website: '', twitter: '', logoUrl: '', blockchain: '', difficulty: 'Medium', status: 'Live', type: 'Confirmed', fundingAmount: '', potentialReward: '', description: '', tasks: [{ text: '', url: '', linkText: '' }] });
         setEditingAirdropId(null);
     };
     useEffect(() => {
@@ -270,8 +270,8 @@ export default function AdminDashboard() {
             fundingAmount: airdrop.fundingAmount || '',
             potentialReward: airdrop.potentialReward || '',
             description: airdrop.description || '',
-            tasks: (airdrop.tasks?.length ? airdrop.tasks : [{ text: '', url: '' }]).map(t =>
-                typeof t === 'string' ? { text: t, url: '' } : { text: t.text, url: t.url || '' }
+            tasks: (airdrop.tasks?.length ? airdrop.tasks : [{ text: '', url: '', linkText: '' }]).map(t =>
+                typeof t === 'string' ? { text: t, url: '', linkText: '' } : { text: t.text, url: t.url || '', linkText: t.linkText || '' }
             )
         });
         setEditingAirdropId(airdrop.id);
@@ -492,24 +492,29 @@ export default function AdminDashboard() {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30 flex items-center gap-1.5"><List className="w-3 h-3" /> Steps</label>
-                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, { text: '', url: '' }] }))}
+                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, { text: '', url: '', linkText: '' }] }))}
                                         className="text-[10px] font-black text-accent-secondary uppercase tracking-widest flex items-center gap-1">
                                         <Plus className="w-3 h-3" /> Add Step
                                     </button>
                                 </div>
                                 {adminAirdropForm.tasks.map((task, idx) => (
-                                    <div key={idx} className="flex gap-2">
-                                        <div className="flex-grow space-y-2">
-                                            <input type="text" value={task.text} placeholder={`Step ${idx + 1}`}
+                                    <div key={idx} className="flex gap-2 mb-4 p-4 glass rounded-xl border border-white/5 bg-white-[0.02]">
+                                        <div className="flex-grow space-y-3">
+                                            <input type="text" value={task.text} placeholder={`Step ${idx + 1} Description (e.g. Visit the website and sign up)`}
                                                 onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = { ...t[idx], text: e.target.value }; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
                                                 className="w-full glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-sm font-medium outline-none focus:border-accent-secondary/50" />
-                                            <input type="text" value={task.url} placeholder="Optional URL Link (e.g. https://...)"
-                                                onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = { ...t[idx], url: e.target.value }; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
-                                                className="w-full glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-medium outline-none focus:border-accent-secondary/50 text-accent-primary placeholder:text-foreground/30" />
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <input type="text" value={task.url} placeholder="Target URL (e.g. https://...)"
+                                                    onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = { ...t[idx], url: e.target.value }; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
+                                                    className="w-full sm:w-1/2 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-medium outline-none focus:border-accent-secondary/50 text-accent-primary placeholder:text-foreground/30" />
+                                                <input type="text" value={task.linkText || ''} placeholder="Specific word to link (e.g. 'website')"
+                                                    onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = { ...t[idx], linkText: e.target.value }; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
+                                                    className="w-full sm:w-1/2 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-medium outline-none focus:border-accent-secondary/50 text-accent-secondary placeholder:text-foreground/30" />
+                                            </div>
                                         </div>
                                         <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: p.tasks.filter((_, i) => i !== idx) }))}
                                             disabled={adminAirdropForm.tasks.length <= 1}
-                                            className="p-2 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0 self-start">
+                                            className="p-2 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0 self-start mt-1">
                                             <X className="w-4 h-4" />
                                         </button>
                                     </div>

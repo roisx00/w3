@@ -219,7 +219,24 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                         <div className="space-y-4">
                             {airdrop.tasks.map((task, i) => {
                                 const isCompleted = hasBadgeAccess && completedTasks.includes(getTaskText(task));
+                                const text = getTaskText(task);
                                 const url = getTaskUrl(task);
+                                const linkText = typeof task === 'string' ? undefined : task.linkText;
+
+                                let renderedText: React.ReactNode = text;
+                                if (url && linkText && text.includes(linkText)) {
+                                    const parts = text.split(linkText);
+                                    renderedText = (
+                                        <>
+                                            {parts[0]}
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline relative z-10" onClick={(e) => e.stopPropagation()}>
+                                                {linkText}
+                                            </a>
+                                            {parts.slice(1).join(linkText)}
+                                        </>
+                                    );
+                                }
+
                                 return (
                                     <div
                                         key={i}
@@ -247,11 +264,11 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                                                     ? 'text-foreground/40 line-through'
                                                     : 'text-foreground/80'
                                                     }`}>
-                                                    {getTaskText(task)}
+                                                    {renderedText}
                                                 </span>
                                             </div>
                                         </div>
-                                        {url && (
+                                        {url && !linkText && (
                                             <a href={url} target="_blank" rel="noopener noreferrer"
                                                 className="flex flex-shrink-0 items-center justify-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors w-full sm:w-auto mt-2 sm:mt-0">
                                                 Redirect <ExternalLink className="w-3.5 h-3.5" />
