@@ -154,7 +154,7 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                             </div>
                         </div>
 
-                        <p className="text-foreground/70 leading-relaxed mb-8 relative z-10">
+                        <p className="text-foreground/70 leading-relaxed mb-8 relative z-10 whitespace-pre-wrap">
                             {airdrop.description}
                         </p>
 

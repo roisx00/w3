@@ -119,7 +119,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     <section className="space-y-8">
                         <div className="glass p-10">
                             <h2 className="font-display font-black text-2xl mb-6">Job Description</h2>
-                            <p className="text-foreground/70 leading-relaxed text-lg">
+                            <p className="text-foreground/70 leading-relaxed text-lg whitespace-pre-wrap">
                                 {job.description}
                             </p>
                         </div>
