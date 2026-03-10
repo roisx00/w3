@@ -17,9 +17,18 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent-primary/5 rounded-full blur-[120px] -ml-64 -mb-64" />
 
         <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 glass-pill px-4 py-2 border-white/5 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <div className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">The Future of Web3 Recruitment</span>
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <div className="inline-flex items-center gap-2 glass-pill px-4 py-2 border-white/5">
+              <div className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">The Future of Web3 Recruitment</span>
+            </div>
+            <a href="https://x.com/w3hubdotspace" target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 glass-pill px-4 py-2 border-white/5 hover:border-accent-primary/30 transition-colors">
+              <svg className="w-3 h-3 text-foreground/50" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.847L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
+              </svg>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">@w3hubdotspace</span>
+            </a>
           </div>
 
           <h1 className="font-display font-black text-6xl md:text-8xl lg:text-9xl mb-8 tracking-tighter uppercase leading-[0.85] animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100">
