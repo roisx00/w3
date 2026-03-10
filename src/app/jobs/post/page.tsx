@@ -46,7 +46,7 @@ function PostJobForm() {
         description: '',
         experienceLevel: 'Mid',
         isRemote: true,
-        duration: 'Permanent',
+        duration: 'Full-time',
         paymentConfig: {
             amount: '',
             currency: 'USDC',
@@ -347,15 +347,16 @@ function PostJobForm() {
                                 </select>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 px-1">Duration</label>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 px-1">Work Type</label>
                                 <select
                                     value={formData.duration}
                                     onChange={e => setFormData({ ...formData, duration: e.target.value })}
                                     className="w-full glass bg-white/5 border-white/10 px-4 py-3 rounded-xl focus:border-accent-primary/50 outline-none transition-all font-bold text-xs uppercase"
                                 >
-                                    <option value="Permanent">Permanent</option>
-                                    <option value="Contract">Contract</option>
+                                    <option value="Full-time">Full-time</option>
                                     <option value="Part-time">Part-time</option>
+                                    <option value="Freelance">Freelance</option>
+                                    <option value="Contract">Contract</option>
                                 </select>
                             </div>
                         </div>
