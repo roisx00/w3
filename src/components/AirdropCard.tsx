@@ -1,8 +1,9 @@
 'use client';
 
 import { Airdrop } from '@/lib/types';
-import { Sparkles, Users, Database, Shield, ArrowRight, CheckCircle2, BadgeCheck } from 'lucide-react';
+import { Sparkles, Users, Database, Shield, ArrowRight, CheckCircle2, BadgeCheck, Share2, Check } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
+import { useState } from 'react';
 import Link from 'next/link';
 
 interface AirdropCardProps {
@@ -12,6 +13,19 @@ interface AirdropCardProps {
 const AirdropCard = ({ airdrop }: AirdropCardProps) => {
     const { trackedAirdrops, toggleTrackAirdrop } = useAppContext();
     const isTracked = trackedAirdrops.includes(airdrop.id);
+    const [copied, setCopied] = useState(false);
+
+    const handleShare = async () => {
+        const url = `${window.location.origin}/airdrops/${airdrop.id}`;
+        const text = `⚡ ${airdrop.projectName} Airdrop — ${airdrop.potentialReward} potential rewards\n\nTrack it on W3Hub:`;
+        if (navigator.share) {
+            try { await navigator.share({ title: airdrop.projectName, text, url }); } catch { }
+        } else {
+            navigator.clipboard.writeText(`${text} ${url}`);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
 
     return (
         <div className="glass p-8 group hover:border-accent-secondary/30 transition-all duration-500 relative overflow-hidden">
@@ -84,10 +98,20 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
 
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                     <button
+                        onClick={handleShare}
+                        title="Share this airdrop"
+                        className={`p-3 rounded-xl font-bold text-xs uppercase transition-all flex items-center justify-center gap-2 border ${copied
+                                ? 'bg-accent-success/10 text-accent-success border-accent-success/20'
+                                : 'bg-white/5 hover:bg-white/10 border-white/5 text-foreground/40 hover:text-foreground'
+                            }`}
+                    >
+                        {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                    </button>
+                    <button
                         onClick={() => toggleTrackAirdrop(airdrop.id)}
                         className={`flex-grow sm:flex-grow-0 px-6 py-3 rounded-xl font-bold text-xs uppercase transition-all flex items-center justify-center gap-2 ${isTracked
-                            ? 'bg-accent-success/10 text-accent-success border border-accent-success/20'
-                            : 'bg-white/5 hover:bg-white/10 border border-white/5'
+                                ? 'bg-accent-success/10 text-accent-success border border-accent-success/20'
+                                : 'bg-white/5 hover:bg-white/10 border border-white/5'
                             }`}
                     >
                         {isTracked ? <CheckCircle2 className="w-4 h-4" /> : null}
