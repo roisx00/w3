@@ -25,7 +25,7 @@ export default function Home() {
             <a href="https://x.com/w3hubdotspace" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 glass-pill px-4 py-2 border-white/5 hover:border-accent-primary/30 transition-colors">
               <svg className="w-3 h-3 text-foreground/50" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.847L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.847L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
               </svg>
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">@w3hubdotspace</span>
             </a>
@@ -63,7 +63,7 @@ export default function Home() {
         </div>
 
         {/* Pillar 1 — Resumes */}
-        <Link href="/onboarding" className="group block glass p-8 md:p-10 hover:border-accent-primary/40 transition-all relative overflow-hidden">
+        <Link href="/dashboard" className="group block glass p-8 md:p-10 hover:border-accent-primary/40 transition-all relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/5 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-accent-primary/10 transition-colors" />
           <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-8">
             <div className="shrink-0">

@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { checkBadgePromo } from '@/lib/promos';
 import { JobPosting, Airdrop } from '@/lib/types';
-import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check } from 'lucide-react';
+import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import { PRICES } from '@/lib/payments';
 import Link from 'next/link';
@@ -22,7 +22,7 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-    const { user, bookmarkedJobs, trackedAirdrops, updateProfile, logReferralEarning } = useAppContext();
+    const { user, bookmarkedJobs, trackedAirdrops, updateProfile, logReferralEarning, logout } = useAppContext();
     const [savedJobsData, setSavedJobsData] = useState<JobPosting[]>([]);
     const [trackedAirdropsData, setTrackedAirdropsData] = useState<Airdrop[]>([]);
     const [showBadgeModal, setShowBadgeModal] = useState(false);
@@ -54,7 +54,7 @@ function DashboardContent() {
             orderBy('createdAt', 'desc')
         )).then(snap => {
             setReferralEarnings(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        }).catch(() => {});
+        }).catch(() => { });
     }, [user?.id]);
 
     // Fetch applications received for jobs this user posted
@@ -66,7 +66,7 @@ function DashboardContent() {
             orderBy('createdAt', 'desc')
         )).then(snap => {
             setApplications(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        }).catch(() => {}); // index may not exist yet — silent fail
+        }).catch(() => { }); // index may not exist yet — silent fail
     }, [user?.id]);
 
     useEffect(() => {
@@ -213,6 +213,14 @@ function DashboardContent() {
                         <Link href="/onboarding" className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl text-foreground/50 transition-colors font-bold text-sm">
                             <Edit3 className="w-4 h-4" /> Edit Profile
                         </Link>
+                        <div className="pt-1 border-t border-white/5">
+                            <button
+                                onClick={logout}
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent-danger/10 rounded-xl text-foreground/40 hover:text-accent-danger transition-all font-bold text-sm"
+                            >
+                                <LogOut className="w-4 h-4" /> Logout
+                            </button>
+                        </div>
                     </nav>
 
                     {/* Badge & Boost Status */}
@@ -262,11 +270,10 @@ function DashboardContent() {
                         <div className="pt-1 border-t border-white/5">
                             <button
                                 onClick={() => updateProfile({ openToWork: !user?.openToWork } as any)}
-                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                    user?.openToWork
+                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${user?.openToWork
                                         ? 'bg-accent-success/10 border border-accent-success/30 text-accent-success'
                                         : 'bg-white/5 border border-white/10 text-foreground/40 hover:border-white/20'
-                                }`}
+                                    }`}
                             >
                                 <span className="flex items-center gap-2">
                                     <Radio className="w-3 h-3" />
@@ -285,6 +292,48 @@ function DashboardContent() {
 
                 {/* Main Content */}
                 <main className="lg:col-span-3 space-y-12">
+                    {/* Quick Action Cards */}
+                    <section>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30 mb-4">Quick Actions</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Link
+                                href="/onboarding"
+                                className="group glass p-6 hover:border-accent-primary/40 transition-all relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-accent-primary/5 rounded-full blur-[60px] -mr-16 -mt-16 group-hover:bg-accent-primary/10 transition-colors" />
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                                        <FileText className="w-6 h-6 text-accent-primary" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-display font-black text-base uppercase tracking-tight mb-0.5 flex items-center gap-2">
+                                            Build Your Resume
+                                            <ArrowUpRight className="w-4 h-4 text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </h3>
+                                        <p className="text-xs text-foreground/40 font-medium">Create or update your Web3 profile</p>
+                                    </div>
+                                </div>
+                            </Link>
+                            <Link
+                                href="/jobs/new"
+                                className="group glass p-6 hover:border-accent-secondary/40 transition-all relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-accent-secondary/5 rounded-full blur-[60px] -mr-16 -mt-16 group-hover:bg-accent-secondary/10 transition-colors" />
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-accent-secondary/10 border border-accent-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                                        <PlusCircle className="w-6 h-6 text-accent-secondary" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-display font-black text-base uppercase tracking-tight mb-0.5 flex items-center gap-2">
+                                            Post a Job
+                                            <ArrowUpRight className="w-4 h-4 text-accent-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </h3>
+                                        <p className="text-xs text-foreground/40 font-medium">Hire Web3 talent for your project</p>
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
+                    </section>
                     {/* Quick Stats */}
                     <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="glass p-6">
