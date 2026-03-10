@@ -15,16 +15,6 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
     const isTracked = trackedAirdrops.includes(airdrop.id);
     const [copied, setCopied] = useState(false);
 
-    // Check if tasks were updated in the last 7 days
-    const hasNewTasks = (() => {
-        if (!airdrop.lastTaskUpdate) return false;
-        const updated = airdrop.lastTaskUpdate?.toDate ? airdrop.lastTaskUpdate.toDate() : new Date(airdrop.lastTaskUpdate);
-        return (Date.now() - updated.getTime()) < 7 * 24 * 60 * 60 * 1000;
-    })();
-
-    // Normalize task to display text
-    const getTaskText = (t: any) => typeof t === 'string' ? t : t?.text ?? '';
-
     const handleShare = async () => {
         const url = `${window.location.origin}/airdrops/${airdrop.id}`;
         const text = `⚡ ${airdrop.projectName} Airdrop — ${airdrop.potentialReward} potential rewards\n\nTrack it on W3Hub:`;
@@ -61,11 +51,6 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
                             {airdrop.paymentStatus === 'verified' && (
                                 <BadgeCheck className="w-5 h-5 text-blue-400 shrink-0" />
                             )}
-                            {hasNewTasks && (
-                                <span className="px-2 py-0.5 rounded-full bg-accent-success/15 border border-accent-success/30 text-[10px] font-black text-accent-success uppercase tracking-widest animate-pulse">
-                                    🔥 New Tasks
-                                </span>
-                            )}
                             <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-bold text-foreground/40 uppercase">
                                 {airdrop.blockchain}
                             </span>
@@ -91,10 +76,10 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
 
             {/* Task List Preview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                {(airdrop.tasks ?? []).slice(0, 3).map((t, i) => (
+                {(airdrop.tasks ?? []).slice(0, 3).map((task, i) => (
                     <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 group-hover:border-white/10 transition-colors">
                         <div className="w-2 h-2 rounded-full bg-accent-secondary/40 shrink-0" />
-                        <span className="text-xs font-medium text-foreground/70 truncate">{getTaskText(t)}</span>
+                        <span className="text-xs font-medium text-foreground/70 truncate">{task}</span>
                     </div>
                 ))}
             </div>

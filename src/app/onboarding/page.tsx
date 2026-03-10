@@ -210,11 +210,10 @@ function OnboardingContent() {
                         <span className="flex-1 text-sm font-mono text-foreground/60 truncate text-left">{profileUrl}</span>
                         <button
                             onClick={copyLink}
-                            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-                                copiedLink
+                            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${copiedLink
                                     ? 'bg-accent-success/20 border border-accent-success/30 text-accent-success'
                                     : 'bg-accent-primary text-white hover:bg-accent-secondary'
-                            }`}
+                                }`}
                         >
                             {copiedLink ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                             {copiedLink ? 'Copied!' : 'Copy'}
@@ -255,11 +254,10 @@ function OnboardingContent() {
                     const isCompleted = idx < currentStep;
                     return (
                         <div key={step.id} className="relative z-10 flex flex-col items-center gap-2">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 border-2 ${
-                                isActive ? 'bg-accent-primary border-accent-primary text-white shadow-[0_0_20px_rgba(124,58,237,0.4)] scale-110' :
-                                isCompleted ? 'bg-accent-success/20 border-accent-success text-accent-success' :
-                                'bg-background border-white/10 text-foreground/40'
-                            }`}>
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 border-2 ${isActive ? 'bg-accent-primary border-accent-primary text-white shadow-[0_0_20px_rgba(124,58,237,0.4)] scale-110' :
+                                    isCompleted ? 'bg-accent-success/20 border-accent-success text-accent-success' :
+                                        'bg-background border-white/10 text-foreground/40'
+                                }`}>
                                 {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : <Icon className="w-6 h-6" />}
                             </div>
                             <span className={`text-[10px] font-bold tracking-widest uppercase ${isActive ? 'text-accent-primary' : 'text-foreground/40'}`}>
@@ -356,11 +354,10 @@ function OnboardingContent() {
                         <div className="grid grid-cols-2 gap-4">
                             {(['Developer', 'Ambassador', 'Community Manager', 'Designer', 'Marketing', 'Researcher', 'Moderator', 'Project Manager'] as UserRole[]).map(role => (
                                 <button key={role} onClick={() => toggleRole(role)}
-                                    className={`px-6 py-4 rounded-xl border-2 text-left font-bold transition-all ${
-                                        formData.roles.includes(role)
+                                    className={`px-6 py-4 rounded-xl border-2 text-left font-bold transition-all ${formData.roles.includes(role)
                                             ? 'bg-accent-secondary/10 border-accent-secondary text-accent-secondary shadow-[0_0_15px_rgba(168,85,247,0.2)]'
                                             : 'bg-white/5 border-white/5 text-foreground/40 hover:border-white/10'
-                                    }`}>
+                                        }`}>
                                     {role}
                                 </button>
                             ))}
@@ -488,9 +485,8 @@ function OnboardingContent() {
                 {/* Footer Actions */}
                 <div className="flex items-center justify-between mt-8 pt-8 border-t border-white/5">
                     <button onClick={handleBack} disabled={currentStep === 0}
-                        className={`flex items-center gap-2 text-sm font-bold uppercase tracking-widest transition-opacity ${
-                            currentStep === 0 ? 'opacity-0 pointer-events-none' : 'text-foreground/40 hover:text-foreground'
-                        }`}>
+                        className={`flex items-center gap-2 text-sm font-bold uppercase tracking-widest transition-opacity ${currentStep === 0 ? 'opacity-0 pointer-events-none' : 'text-foreground/40 hover:text-foreground'
+                            }`}>
                         <ArrowLeft className="w-4 h-4" /> Back
                     </button>
                     <button onClick={handleNext}

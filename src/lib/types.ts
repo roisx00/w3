@@ -47,7 +47,6 @@ export interface TalentProfile {
     reputationScore?: number;   // 0–100, blend of profileScore + reviews
     reviewCount?: number;
     referredBy?: string;        // userId of referrer
-    notifications?: AirdropNotification[]; // in-app airdrop update notifications
 }
 
 export interface ReferralEarning {
@@ -102,21 +101,6 @@ export interface JobPosting {
     boostExpiry?: string;
 }
 
-// Structured airdrop task — text + optional redirect URL
-export interface AirdropTask {
-    text: string;
-    url?: string;
-}
-
-export interface AirdropNotification {
-    id: string;
-    airdropId: string;
-    airdropName: string;
-    message: string;
-    createdAt: any;
-    read: boolean;
-}
-
 export interface Airdrop {
     id: string;
     projectName: string;
@@ -131,10 +115,9 @@ export interface Airdrop {
     type: 'Confirmed' | 'Potential';
     difficulty: 'Easy' | 'Medium' | 'Hard';
     participationCount: string;
-    tasks: (AirdropTask | string)[]; // supports both legacy strings and new structured tasks
-    taskImages?: string[];           // optional screenshot per task (parallel array)
+    tasks: string[]; // Simplified to string[] for the checklist UI
+    taskImages?: string[]; // Optional screenshot per task (parallel array)
     featured?: boolean;
-    lastTaskUpdate?: any;            // timestamp — bumps airdrop to top when tasks are updated
     createdAt?: any;
     paymentStatus?: 'pending' | 'verified' | 'rejected';
     paymentTxHash?: string;

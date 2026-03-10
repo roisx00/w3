@@ -7,7 +7,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAppContext } from '@/context/AppContext';
 import AuthGuard from '@/components/auth/AuthGuard';
 import PaymentModal from '@/components/PaymentModal';
-import { Sparkles, Globe, ArrowRight, CheckCircle2, List, Plus, Trash2, AlertTriangle, ImagePlus, X, Link2 } from 'lucide-react';
+import { Sparkles, Globe, ArrowRight, CheckCircle2, List, Plus, Trash2, AlertTriangle, ImagePlus, X } from 'lucide-react';
 import { PRICES } from '@/lib/payments';
 
 export default function SubmitAirdropPage() {
@@ -39,10 +39,7 @@ function SubmitAirdropForm() {
         fundingAmount: '',
         potentialReward: '',
         description: '',
-        tasks: [
-            { text: 'Follow on Twitter', url: '' },
-            { text: 'Join Discord', url: '' },
-        ] as { text: string; url: string }[],
+        tasks: ['Follow Twitter', 'Join Discord'] as string[],
         taskImages: ['', ''] as string[],
     });
 
@@ -103,7 +100,7 @@ function SubmitAirdropForm() {
         }
     };
 
-    const addTask = () => setFormData({ ...formData, tasks: [...formData.tasks, { text: '', url: '' }], taskImages: [...formData.taskImages, ''] });
+    const addTask = () => setFormData({ ...formData, tasks: [...formData.tasks, ''], taskImages: [...formData.taskImages, ''] });
     const removeTask = (index: number) => {
         setFormData({
             ...formData,
@@ -111,14 +108,9 @@ function SubmitAirdropForm() {
             taskImages: formData.taskImages.filter((_, i) => i !== index),
         });
     };
-    const updateTaskText = (index: number, val: string) => {
-        const newTasks = [...formData.tasks] as { text: string; url: string }[];
-        newTasks[index] = { ...newTasks[index], text: val };
-        setFormData({ ...formData, tasks: newTasks });
-    };
-    const updateTaskUrl = (index: number, val: string) => {
-        const newTasks = [...formData.tasks] as { text: string; url: string }[];
-        newTasks[index] = { ...newTasks[index], url: val };
+    const updateTask = (index: number, val: string) => {
+        const newTasks = [...formData.tasks];
+        newTasks[index] = val;
         setFormData({ ...formData, tasks: newTasks });
     };
 
@@ -390,9 +382,9 @@ function SubmitAirdropForm() {
                                     <input
                                         required
                                         type="text"
-                                        placeholder="Step description e.g. Visit the website and sign up"
-                                        value={typeof task === 'string' ? task : task.text}
-                                        onChange={e => updateTaskText(idx, e.target.value)}
+                                        placeholder="Step description..."
+                                        value={task}
+                                        onChange={e => updateTask(idx, e.target.value)}
                                         className="flex-grow glass bg-white/5 border-white/10 px-4 py-2.5 rounded-xl focus:border-accent-success/50 outline-none transition-all font-medium text-sm"
                                     />
                                     <button
@@ -403,17 +395,6 @@ function SubmitAirdropForm() {
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>
-                                </div>
-                                {/* Optional redirect URL */}
-                                <div className="ml-7 flex items-center gap-2">
-                                    <Link2 className="w-3.5 h-3.5 text-accent-success/60 shrink-0" />
-                                    <input
-                                        type="url"
-                                        placeholder="https://... (optional — users will click this to complete the step)"
-                                        value={typeof task === 'string' ? '' : task.url}
-                                        onChange={e => updateTaskUrl(idx, e.target.value)}
-                                        className="flex-grow glass bg-white/3 border border-dashed border-accent-success/20 px-3 py-2 rounded-xl focus:border-accent-success/50 outline-none transition-all text-xs font-medium text-foreground/60 placeholder:text-foreground/20"
-                                    />
                                 </div>
                                 {/* Screenshot upload for this step */}
                                 {formData.taskImages[idx] ? (

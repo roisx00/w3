@@ -9,7 +9,6 @@ import {
     ArrowLeft, CheckCircle2, Circle,
     ExternalLink, Twitter, Globe, Info, Clock, AlertCircle, Copy, Lock
 } from 'lucide-react';
-import { AirdropTask } from '@/lib/types';
 import Link from 'next/link';
 import { useAppContext } from '@/context/AppContext';
 import PaymentModal from '@/components/PaymentModal';
@@ -20,7 +19,7 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
     const { user, updateProfile } = useAppContext();
     const [airdrop, setAirdrop] = useState<Airdrop | null>(null);
     const [loading, setLoading] = useState(true);
-    const [completedTasks, setCompletedTasks] = useState<number[]>([]);  // stored as index array
+    const [completedTasks, setCompletedTasks] = useState<string[]>([]);
     const [shareCopied, setShareCopied] = useState(false);
     const [showBadgeModal, setShowBadgeModal] = useState(false);
     const [badgeLoading, setBadgeLoading] = useState(false);
@@ -30,15 +29,7 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
     // Load completed tasks from localStorage on mount
     useEffect(() => {
         const saved = localStorage.getItem(`airdrop_tasks_${id}`);
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            // migrate old string[] to number[]
-            if (parsed.length > 0 && typeof parsed[0] === 'string') {
-                setCompletedTasks([]);
-            } else {
-                setCompletedTasks(parsed);
-            }
-        }
+        if (saved) setCompletedTasks(JSON.parse(saved));
     }, [id]);
 
     useEffect(() => {
@@ -80,17 +71,13 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
         );
     }
 
-    // Normalize task to { text, url } regardless of legacy format
-    const getTask = (t: any): AirdropTask =>
-        typeof t === 'string' ? { text: t, url: undefined } : t;
-
-    const toggleTask = (index: number) => {
+    const toggleTask = (task: string) => {
         if (!hasBadgeAccess) {
             setShowBadgeModal(true);
             return;
         }
         setCompletedTasks(prev => {
-            const next = prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index];
+            const next = prev.includes(task) ? prev.filter(t => t !== task) : [...prev, task];
             localStorage.setItem(`airdrop_tasks_${id}`, JSON.stringify(next));
             return next;
         });
@@ -225,58 +212,39 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                         )}
 
                         <div className="space-y-4">
-                            {airdrop.tasks.map((rawTask, i) => {
-                                const task = getTask(rawTask);
-                                const isDone = hasBadgeAccess && completedTasks.includes(i);
-                                return (
-                                    <div
-                                        key={i}
-                                        className={`w-full glass p-5 flex items-center justify-between group transition-all ${isDone
-                                                ? 'border-accent-success/30 bg-accent-success/5'
-                                                : 'hover:border-white/10'
-                                            }`}
-                                    >
-                                        {/* Left: checkbox + text */}
-                                        <button
-                                            onClick={() => toggleTask(i)}
-                                            className="flex items-center gap-4 flex-1 text-left"
-                                        >
-                                            <div className={`transition-colors shrink-0 ${!hasBadgeAccess
-                                                    ? 'text-foreground/10'
-                                                    : isDone
-                                                        ? 'text-accent-success'
-                                                        : 'text-foreground/20 group-hover:text-foreground/40'
-                                                }`}>
-                                                {hasBadgeAccess && isDone
-                                                    ? <CheckCircle2 className="w-6 h-6" />
-                                                    : hasBadgeAccess
-                                                        ? <Circle className="w-6 h-6" />
-                                                        : <Lock className="w-5 h-5" />
-                                                }
-                                            </div>
-                                            <span className={`font-bold transition-colors text-sm leading-snug ${isDone ? 'text-foreground/30 line-through' : 'text-foreground/80'
-                                                }`}>
-                                                {task.text}
-                                            </span>
-                                        </button>
-                                        {/* Right: open URL button */}
-                                        {task.url ? (
-                                            <a
-                                                href={task.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                onClick={e => e.stopPropagation()}
-                                                title="Open link for this step"
-                                                className="ml-4 shrink-0 p-2 rounded-xl bg-accent-primary/10 border border-accent-primary/20 text-accent-primary hover:bg-accent-primary/20 hover:scale-110 active:scale-95 transition-all"
-                                            >
-                                                <ExternalLink className="w-4 h-4" />
-                                            </a>
-                                        ) : (
-                                            <ExternalLink className="ml-4 w-4 h-4 text-foreground/10 shrink-0" />
-                                        )}
+                            {airdrop.tasks.map((task, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => toggleTask(task)}
+                                    className={`w-full glass p-6 flex items-center justify-between group transition-all text-left ${hasBadgeAccess && completedTasks.includes(task)
+                                            ? 'border-accent-success/30 bg-accent-success/5'
+                                            : 'hover:border-white/10'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`transition-colors ${!hasBadgeAccess
+                                                ? 'text-foreground/10'
+                                                : completedTasks.includes(task)
+                                                    ? 'text-accent-success'
+                                                    : 'text-foreground/20 group-hover:text-foreground/40'
+                                            }`}>
+                                            {hasBadgeAccess && completedTasks.includes(task)
+                                                ? <CheckCircle2 className="w-6 h-6" />
+                                                : hasBadgeAccess
+                                                    ? <Circle className="w-6 h-6" />
+                                                    : <Lock className="w-5 h-5" />
+                                            }
+                                        </div>
+                                        <span className={`font-bold transition-colors ${hasBadgeAccess && completedTasks.includes(task)
+                                                ? 'text-foreground/40 line-through'
+                                                : 'text-foreground/80'
+                                            }`}>
+                                            {task}
+                                        </span>
                                     </div>
-                                );
-                            })}
+                                    <ExternalLink className="w-4 h-4 text-foreground/10 group-hover:text-foreground/30 transition-colors" />
+                                </button>
+                            ))}
                         </div>
                     </section>
 

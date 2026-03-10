@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { TalentProfile, JobPosting, Airdrop, UserRole, AirdropNotification } from '@/lib/types';
+import { TalentProfile, JobPosting, Airdrop } from '@/lib/types';
 import { computeProfileScore } from '@/lib/promos';
 import { auth, db } from '@/lib/firebase';
 import {
@@ -18,17 +18,10 @@ import {
     setDoc,
     addDoc,
     collection,
-    serverTimestamp,
-    onSnapshot,
-    updateDoc,
-    arrayUnion,
-    arrayRemove,
-    query,
-    orderBy,
-    deleteDoc
+    serverTimestamp
 } from 'firebase/firestore';
 
-interface AppContextType {
+interface AppState {
     user: TalentProfile | null;
     isLoggedIn: boolean;
     authLoading: boolean;
@@ -42,12 +35,9 @@ interface AppContextType {
     toggleTrackAirdrop: (airdropId: string) => void;
     updateProfile: (profile: Partial<TalentProfile>) => void;
     logReferralEarning: (paymentType: string, amount: number, txHash: string, payer: TalentProfile) => Promise<void>;
-    notifications: AirdropNotification[];
-    markNotificationAsRead: (id: string) => Promise<void>;
-    clearNotifications: () => Promise<void>;
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
+const AppContext = createContext<AppState | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<TalentProfile | null>(null);
@@ -55,8 +45,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [authLoading, setAuthLoading] = useState(true);
     const [bookmarkedJobs, setBookmarkedJobs] = useState<string[]>([]);
     const [trackedAirdrops, setTrackedAirdrops] = useState<string[]>([]);
-    const [notifications, setNotifications] = useState<AirdropNotification[]>([]);
-    const [notificationsLoading, setNotificationsLoading] = useState(true);
 
     // Monitor Auth State
     useEffect(() => {
@@ -129,34 +117,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         return () => unsubscribe();
     }, []);
-
-    // Monitor Notifications
-    useEffect(() => {
-        let unsubscribe: (() => void) | undefined;
-        if (auth.currentUser?.uid) {
-            setNotificationsLoading(true);
-            const notificationsRef = collection(db, 'talents', auth.currentUser.uid, 'notifications');
-            const q = query(notificationsRef, orderBy('createdAt', 'desc'));
-
-            unsubscribe = onSnapshot(q, (snapshot) => {
-                const fetchedNotifications: AirdropNotification[] = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as AirdropNotification[];
-                setNotifications(fetchedNotifications);
-                setNotificationsLoading(false);
-            }, (error) => {
-                console.error("Error fetching notifications:", error);
-                setNotificationsLoading(false);
-            });
-        } else {
-            setNotifications([]);
-            setNotificationsLoading(false);
-        }
-        return () => {
-            if (unsubscribe) unsubscribe();
-        };
-    }, [auth.currentUser?.uid, db]); // Depend on uid and db
 
     const login = async () => {
         try {
@@ -247,31 +207,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
 
-    const markNotificationAsRead = async (id: string) => {
-        const uid = auth.currentUser?.uid;
-        if (!uid) return;
-        try {
-            await updateDoc(doc(db, 'talents', uid, 'notifications', id), { read: true });
-        } catch (e) {
-            console.error("Error marking notification as read:", e);
-        }
-    };
-
-    const clearNotifications = async () => {
-        const uid = auth.currentUser?.uid;
-        if (!uid) return;
-        try {
-            const q = query(collection(db, 'talents', uid, 'notifications'));
-            const snapshot = await getDoc(q as any); // getDocs is for collection, getDoc is for single doc. This needs to be getDocs.
-            // Corrected:
-            const notificationsSnapshot = await (await import('firebase/firestore')).getDocs(q);
-            const deletePromises = notificationsSnapshot.docs.map(d => deleteDoc(d.ref));
-            await Promise.all(deletePromises);
-        } catch (e) {
-            console.error("Error clearing notifications:", e);
-        }
-    };
-
     const updateProfile = async (profile: Partial<TalentProfile>) => {
         const firebaseUser = auth.currentUser;
         if (!firebaseUser) return;
@@ -326,9 +261,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             toggleTrackAirdrop,
             updateProfile,
             logReferralEarning,
-            notifications,
-            markNotificationAsRead,
-            clearNotifications,
         }}>
             {children}
         </AppContext.Provider>

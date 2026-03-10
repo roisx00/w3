@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { checkBadgePromo } from '@/lib/promos';
 import { JobPosting, Airdrop } from '@/lib/types';
-import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle, Bell, Trash2 } from 'lucide-react';
+import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import { PRICES } from '@/lib/payments';
 import Link from 'next/link';
@@ -22,9 +22,8 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-    const { user, bookmarkedJobs, trackedAirdrops, updateProfile, logReferralEarning, logout, notifications, markNotificationAsRead, clearNotifications } = useAppContext();
+    const { user, bookmarkedJobs, trackedAirdrops, updateProfile, logReferralEarning, logout } = useAppContext();
     const [savedJobsData, setSavedJobsData] = useState<JobPosting[]>([]);
-    const [activeSection, setActiveSection] = useState<'overview' | 'notifications'>('overview');
     const [trackedAirdropsData, setTrackedAirdropsData] = useState<Airdrop[]>([]);
     const [showBadgeModal, setShowBadgeModal] = useState(false);
     const [showBoostModal, setShowBoostModal] = useState(false);
@@ -205,23 +204,9 @@ function DashboardContent() {
                     </div>
 
                     <nav className="glass p-4 space-y-1">
-                        <button
-                            onClick={() => setActiveSection('overview')}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeSection === 'overview' ? 'bg-white/5 text-accent-primary' : 'text-foreground/50 hover:bg-white/5'}`}
-                        >
-                            <span className="flex items-center gap-3"><Award className="w-4 h-4" /> Overview</span>
-                        </button>
-                        <button
-                            onClick={() => setActiveSection('notifications')}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeSection === 'notifications' ? 'bg-white/5 text-secondary' : 'text-foreground/50 hover:bg-white/5'}`}
-                        >
-                            <span className="flex items-center gap-3"><Radio className="w-4 h-4" /> Notifications</span>
-                            {notifications.filter(n => !n.read).length > 0 && (
-                                <span className="px-1.5 py-0.5 bg-accent-secondary text-white text-[9px] font-black rounded-full animate-pulse">
-                                    {notifications.filter(n => !n.read).length}
-                                </span>
-                            )}
-                        </button>
+                        <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl text-accent-primary font-bold text-sm">
+                            <Award className="w-4 h-4" /> Overview
+                        </Link>
                         <Link href={`/talents/${user?.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl text-foreground/50 transition-colors font-bold text-sm">
                             <Settings className="w-4 h-4" /> My Resume
                         </Link>
@@ -307,256 +292,203 @@ function DashboardContent() {
 
                 {/* Main Content */}
                 <main className="lg:col-span-3 space-y-12">
-                    {activeSection === 'notifications' ? (
-                        <section className="space-y-6">
-                            <div className="flex items-center justify-between mb-8">
-                                <div>
-                                    <h2 className="text-3xl font-black uppercase tracking-tight">Notifications</h2>
-                                    <p className="text-xs text-foreground/30 font-bold uppercase tracking-widest mt-1">Updates on your tracked airdrops</p>
+                    {/* Quick Action Cards */}
+                    <section>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30 mb-4">Quick Actions</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Link
+                                href="/onboarding"
+                                className="group glass p-6 hover:border-accent-primary/40 transition-all relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-accent-primary/5 rounded-full blur-[60px] -mr-16 -mt-16 group-hover:bg-accent-primary/10 transition-colors" />
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                                        <FileText className="w-6 h-6 text-accent-primary" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-display font-black text-base uppercase tracking-tight mb-0.5 flex items-center gap-2">
+                                            Build Your Resume
+                                            <ArrowUpRight className="w-4 h-4 text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </h3>
+                                        <p className="text-xs text-foreground/40 font-medium">Create or update your Web3 profile</p>
+                                    </div>
                                 </div>
-                                {notifications.length > 0 && (
-                                    <button onClick={clearNotifications} className="text-[10px] font-black uppercase tracking-widest text-foreground/20 hover:text-accent-danger transition-colors flex items-center gap-2">
-                                        <Trash2 className="w-3 h-3" /> Clear All
-                                    </button>
+                            </Link>
+                            <Link
+                                href="/jobs/new"
+                                className="group glass p-6 hover:border-accent-secondary/40 transition-all relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-accent-secondary/5 rounded-full blur-[60px] -mr-16 -mt-16 group-hover:bg-accent-secondary/10 transition-colors" />
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-accent-secondary/10 border border-accent-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                                        <PlusCircle className="w-6 h-6 text-accent-secondary" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-display font-black text-base uppercase tracking-tight mb-0.5 flex items-center gap-2">
+                                            Post a Job
+                                            <ArrowUpRight className="w-4 h-4 text-accent-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </h3>
+                                        <p className="text-xs text-foreground/40 font-medium">Hire Web3 talent for your project</p>
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
+                    </section>
+                    {/* Quick Stats */}
+                    <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="glass p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <Briefcase className="w-5 h-5 text-accent-primary" />
+                                <span className="text-[10px] font-bold text-foreground/20">SAVED</span>
+                            </div>
+                            <span className="text-3xl font-black block mb-1">{bookmarkedJobs.length}</span>
+                            <span className="text-xs font-bold text-foreground/40 tracking-tight">Saved Jobs</span>
+                        </div>
+                        <div className="glass p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <Zap className="w-5 h-5 text-accent-secondary" />
+                                <span className="text-[10px] font-bold text-foreground/20">TRACKING</span>
+                            </div>
+                            <span className="text-3xl font-black block mb-1">{trackedAirdrops.length}</span>
+                            <span className="text-xs font-bold text-foreground/40 tracking-tight">Tracked Airdrops</span>
+                        </div>
+                        <div className="glass p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <Clock className="w-5 h-5 text-accent-success" />
+                                <span className="text-[10px] font-bold text-foreground/20">COMPLETE</span>
+                            </div>
+                            <span className="text-3xl font-black block mb-1">{profilePct}%</span>
+                            <span className="text-xs font-bold text-foreground/40 tracking-tight">Profile Complete</span>
+                        </div>
+                    </section>
+
+                    {/* Saved Items */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <section>
+                            <h4 className="font-display font-black text-xl mb-6 flex items-center gap-3">
+                                Saved Jobs
+                                <span className="px-2 py-0.5 bg-white/5 text-[10px] rounded text-foreground/40">{savedJobsData.length}</span>
+                            </h4>
+                            <div className="space-y-4">
+                                {savedJobsData.length > 0 ? savedJobsData.map(job => (
+                                    <Link key={job.id} href={`/jobs/${job.id}`} className="glass p-4 group hover:border-accent-primary/30 transition-colors flex justify-between items-center">
+                                        <div>
+                                            <h5 className="font-bold text-sm mb-1">{job.roleNeeded}</h5>
+                                            <p className="text-[10px] font-bold text-accent-primary tracking-tighter uppercase">{job.projectName}</p>
+                                        </div>
+                                        <ArrowUpRight className="w-4 h-4 text-foreground/20 group-hover:text-accent-primary transition-colors" />
+                                    </Link>
+                                )) : (
+                                    <p className="text-sm text-foreground/20 italic">No jobs bookmarked yet.</p>
                                 )}
                             </div>
+                        </section>
 
-                            {notifications.length > 0 ? (
+                        <section>
+                            <h4 className="font-display font-black text-xl mb-6 flex items-center gap-3">
+                                Tracked Airdrops
+                                <span className="px-2 py-0.5 bg-white/5 text-[10px] rounded text-foreground/40">{trackedAirdropsData.length}</span>
+                            </h4>
+                            <div className="space-y-4">
+                                {trackedAirdropsData.length > 0 ? trackedAirdropsData.map(airdrop => (
+                                    <Link key={airdrop.id} href={`/airdrops/${airdrop.id}`} className="glass p-4 group hover:border-accent-secondary/30 transition-colors flex justify-between items-center">
+                                        <div>
+                                            <h5 className="font-bold text-sm mb-1">{airdrop.projectName}</h5>
+                                            <p className="text-[10px] font-bold text-accent-secondary tracking-tighter uppercase">{airdrop.blockchain}</p>
+                                        </div>
+                                        <ArrowUpRight className="w-4 h-4 text-foreground/20 group-hover:text-accent-secondary transition-colors" />
+                                    </Link>
+                                )) : (
+                                    <p className="text-sm text-foreground/20 italic">Not tracking any airdrops.</p>
+                                )}
+                            </div>
+                        </section>
+
+                        {/* Applications Received */}
+                        {applications.length > 0 && (
+                            <section>
+                                <h4 className="font-display font-black text-xl mb-6 flex items-center gap-3">
+                                    Applications Received
+                                    <span className="px-2 py-0.5 bg-accent-primary/10 text-accent-primary text-[10px] rounded font-black">{applications.length}</span>
+                                </h4>
                                 <div className="space-y-3">
-                                    {notifications.map(notif => (
-                                        <div
-                                            key={notif.id}
-                                            onClick={() => markNotificationAsRead(notif.id)}
-                                            className={`glass p-5 border-white/5 transition-all flex items-start gap-4 cursor-pointer hover:border-white/10 ${!notif.read ? 'bg-accent-secondary/5 border-accent-secondary/20' : 'opacity-60'}`}
-                                        >
-                                            <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${!notif.read ? 'bg-accent-secondary shadow-[0_0_8px_rgba(255,0,187,0.5)]' : 'bg-transparent'}`} />
-                                            <div className="flex-1">
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <h5 className="font-bold text-sm tracking-tight">{notif.airdropName || 'Airdrop'} Update</h5>
-                                                    <span className="text-[10px] font-medium text-foreground/20 italic">
-                                                        {notif.createdAt?.toDate ? notif.createdAt.toDate().toLocaleDateString() : 'Recently'}
-                                                    </span>
+                                    {applications.map((app: any) => (
+                                        <div key={app.id} className="glass p-5 space-y-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center font-bold text-accent-primary text-sm overflow-hidden shrink-0">
+                                                        {app.applicantPhotoUrl
+                                                            ? <img src={app.applicantPhotoUrl} alt="" className="w-full h-full object-cover" />
+                                                            : app.applicantName?.charAt(0)
+                                                        }
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-sm">{app.applicantName}</p>
+                                                        <p className="text-[10px] text-foreground/40">@{app.applicantUsername} · {app.jobTitle} @ {app.projectName}</p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-foreground/60 leading-relaxed mb-3">{notif.message}</p>
-                                                <Link
-                                                    href={`/airdrops/${notif.airdropId}`}
-                                                    className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-accent-secondary hover:underline"
-                                                >
-                                                    View Tasks <ArrowUpRight className="w-3 h-3" />
+                                                <Link href={app.cvLink} target="_blank"
+                                                    className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-accent-primary/10 border border-accent-primary/20 text-accent-primary rounded-lg hover:bg-accent-primary/20 transition-colors shrink-0">
+                                                    View CV
                                                 </Link>
                                             </div>
+                                            <p className="text-sm text-foreground/60 leading-relaxed pl-12">{app.coverNote}</p>
                                         </div>
                                     ))}
                                 </div>
-                            ) : (
-                                <div className="glass p-12 text-center border-dashed border-white/5">
-                                    <Bell className="w-8 h-8 text-foreground/5 mx-auto mb-4" />
-                                    <p className="text-2xl font-black text-foreground/10 uppercase mb-2">Inbox Empty</p>
-                                    <p className="text-sm text-foreground/20 font-medium">You're all caught up! New task alerts will appear here.</p>
-                                </div>
-                            )}
-                        </section>
-                    ) : (
-                        <>
-                            {/* Quick Action Cards */}
-                            <section>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30 mb-4">Quick Actions</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Link
-                                        href="/onboarding"
-                                        className="group glass p-6 hover:border-accent-primary/40 transition-all relative overflow-hidden"
-                                    >
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-accent-primary/5 rounded-full blur-[60px] -mr-16 -mt-16 group-hover:bg-accent-primary/10 transition-colors" />
-                                        <div className="relative z-10 flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
-                                                <FileText className="w-6 h-6 text-accent-primary" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <h3 className="font-display font-black text-base uppercase tracking-tight mb-0.5 flex items-center gap-2">
-                                                    Build Your Resume
-                                                    <ArrowUpRight className="w-4 h-4 text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                </h3>
-                                                <p className="text-xs text-foreground/40 font-medium">Create or update your Web3 profile</p>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                    <Link
-                                        href="/jobs/new"
-                                        className="group glass p-6 hover:border-accent-secondary/40 transition-all relative overflow-hidden"
-                                    >
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-accent-secondary/5 rounded-full blur-[60px] -mr-16 -mt-16 group-hover:bg-accent-secondary/10 transition-colors" />
-                                        <div className="relative z-10 flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-accent-secondary/10 border border-accent-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
-                                                <PlusCircle className="w-6 h-6 text-accent-secondary" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <h3 className="font-display font-black text-base uppercase tracking-tight mb-0.5 flex items-center gap-2">
-                                                    Post a Job
-                                                    <ArrowUpRight className="w-4 h-4 text-accent-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                </h3>
-                                                <p className="text-xs text-foreground/40 font-medium">Hire Web3 talent for your project</p>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                </div>
                             </section>
-                            {/* Quick Stats */}
-                            <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="glass p-6">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <Briefcase className="w-5 h-5 text-accent-primary" />
-                                        <span className="text-[10px] font-bold text-foreground/20">SAVED</span>
-                                    </div>
-                                    <span className="text-3xl font-black block mb-1">{bookmarkedJobs.length}</span>
-                                    <span className="text-xs font-bold text-foreground/40 tracking-tight">Saved Jobs</span>
-                                </div>
-                                <div className="glass p-6">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <Zap className="w-5 h-5 text-accent-secondary" />
-                                        <span className="text-[10px] font-bold text-foreground/20">TRACKING</span>
-                                    </div>
-                                    <span className="text-3xl font-black block mb-1">{trackedAirdrops.length}</span>
-                                    <span className="text-xs font-bold text-foreground/40 tracking-tight">Tracked Airdrops</span>
-                                </div>
-                                <div className="glass p-6">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <Clock className="w-5 h-5 text-accent-success" />
-                                        <span className="text-[10px] font-bold text-foreground/20">COMPLETE</span>
-                                    </div>
-                                    <span className="text-3xl font-black block mb-1">{profilePct}%</span>
-                                    <span className="text-xs font-bold text-foreground/40 tracking-tight">Profile Complete</span>
-                                </div>
-                            </section>
+                        )}
 
-                            {/* Saved Items */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <section>
-                                    <h4 className="font-display font-black text-xl mb-6 flex items-center gap-3">
-                                        Saved Jobs
-                                        <span className="px-2 py-0.5 bg-white/5 text-[10px] rounded text-foreground/40">{savedJobsData.length}</span>
-                                    </h4>
-                                    <div className="space-y-4">
-                                        {savedJobsData.length > 0 ? savedJobsData.map(job => (
-                                            <Link key={job.id} href={`/jobs/${job.id}`} className="glass p-4 group hover:border-accent-primary/30 transition-colors flex justify-between items-center">
-                                                <div>
-                                                    <h5 className="font-bold text-sm mb-1">{job.roleNeeded}</h5>
-                                                    <p className="text-[10px] font-bold text-accent-primary tracking-tighter uppercase">{job.projectName}</p>
-                                                </div>
-                                                <ArrowUpRight className="w-4 h-4 text-foreground/20 group-hover:text-accent-primary transition-colors" />
-                                            </Link>
-                                        )) : (
-                                            <p className="text-sm text-foreground/20 italic">No jobs bookmarked yet.</p>
-                                        )}
-                                    </div>
-                                </section>
-
-                                <section>
-                                    <h4 className="font-display font-black text-xl mb-6 flex items-center gap-3">
-                                        Tracked Airdrops
-                                        <span className="px-2 py-0.5 bg-white/5 text-[10px] rounded text-foreground/40">{trackedAirdropsData.length}</span>
-                                    </h4>
-                                    <div className="space-y-4">
-                                        {trackedAirdropsData.length > 0 ? trackedAirdropsData.map(airdrop => (
-                                            <Link key={airdrop.id} href={`/airdrops/${airdrop.id}`} className="glass p-4 group hover:border-accent-secondary/30 transition-colors flex justify-between items-center">
-                                                <div>
-                                                    <h5 className="font-bold text-sm mb-1">{airdrop.projectName}</h5>
-                                                    <p className="text-[10px] font-bold text-accent-secondary tracking-tighter uppercase">{airdrop.blockchain}</p>
-                                                </div>
-                                                <ArrowUpRight className="w-4 h-4 text-foreground/20 group-hover:text-accent-secondary transition-colors" />
-                                            </Link>
-                                        )) : (
-                                            <p className="text-sm text-foreground/20 italic">Not tracking any airdrops.</p>
-                                        )}
-                                    </div>
-                                </section>
+                        {/* Referral Program */}
+                        <section className="glass p-8 border-accent-primary/20 bg-accent-primary/5">
+                            <div className="flex items-center gap-3 mb-6">
+                                <Gift className="w-5 h-5 text-accent-primary" />
+                                <h4 className="font-display font-black text-xl">Referral Program</h4>
+                                <span className="px-2 py-0.5 bg-accent-primary/20 text-accent-primary text-[10px] font-black rounded-full uppercase tracking-widest">10% forever</span>
                             </div>
 
-                            {/* Applications Received */}
-                            {applications.length > 0 && (
-                                <section>
-                                    <h4 className="font-display font-black text-xl mb-6 flex items-center gap-3">
-                                        Applications Received
-                                        <span className="px-2 py-0.5 bg-accent-primary/10 text-accent-primary text-[10px] rounded font-black">{applications.length}</span>
-                                    </h4>
-                                    <div className="space-y-3">
-                                        {applications.map((app: any) => (
-                                            <div key={app.id} className="glass p-5 space-y-3">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center font-bold text-accent-primary text-sm overflow-hidden shrink-0">
-                                                            {app.applicantPhotoUrl
-                                                                ? <img src={app.applicantPhotoUrl} alt="" className="w-full h-full object-cover" />
-                                                                : app.applicantName?.charAt(0)
-                                                            }
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-bold text-sm">{app.applicantName}</p>
-                                                            <p className="text-[10px] text-foreground/40">@{app.applicantUsername} · {app.jobTitle} @ {app.projectName}</p>
-                                                        </div>
-                                                    </div>
-                                                    <Link href={app.cvLink} target="_blank"
-                                                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-accent-primary/10 border border-accent-primary/20 text-accent-primary rounded-lg hover:bg-accent-primary/20 transition-colors shrink-0">
-                                                        View CV
-                                                    </Link>
-                                                </div>
-                                                <p className="text-sm text-foreground/60 leading-relaxed pl-12">{app.coverNote}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
+                            <p className="text-sm text-foreground/50 mb-6 leading-relaxed">
+                                Share your referral link. Every time someone you referred pays for a job post, airdrop, or badge — you earn <strong className="text-foreground/80">10% of their payment</strong> in USDC, permanently.
+                            </p>
+
+                            {/* Referral link */}
+                            <div className="flex items-center gap-2 glass bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-6">
+                                <span className="flex-1 text-xs font-mono text-foreground/50 truncate">{referralLink}</span>
+                                <button onClick={copyReferralLink}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all shrink-0 ${copiedRef ? 'bg-accent-success/20 text-accent-success border border-accent-success/30' : 'bg-accent-primary/10 text-accent-primary border border-accent-primary/20 hover:bg-accent-primary/20'}`}>
+                                    {copiedRef ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                    {copiedRef ? 'Copied!' : 'Copy'}
+                                </button>
+                            </div>
+
+                            {/* Earnings */}
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div className="glass p-4 text-center">
+                                    <p className="text-2xl font-black text-accent-success">{referralEarnings.length}</p>
+                                    <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest mt-1">Referrals</p>
+                                </div>
+                                <div className="glass p-4 text-center">
+                                    <p className="text-2xl font-black text-accent-success">
+                                        ${referralEarnings.reduce((sum, r) => sum + (r.earning || 0), 0).toFixed(2)}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest mt-1">USDC Earned</p>
+                                </div>
+                            </div>
+
+                            {referralEarnings.length > 0 && (
+                                <div className="space-y-2">
+                                    {referralEarnings.slice(0, 5).map((r: any) => (
+                                        <div key={r.id} className="flex items-center justify-between text-xs px-3 py-2 bg-white/5 rounded-lg">
+                                            <span className="text-foreground/60">{r.refereeName} · {r.paymentType.replace('_', ' ')}</span>
+                                            <span className="font-black text-accent-success">+${r.earning} USDC</span>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
 
-                            {/* Referral Program */}
-                            <section className="glass p-8 border-accent-primary/20 bg-accent-primary/5">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <Gift className="w-5 h-5 text-accent-primary" />
-                                    <h4 className="font-display font-black text-xl">Referral Program</h4>
-                                    <span className="px-2 py-0.5 bg-accent-primary/20 text-accent-primary text-[10px] font-black rounded-full uppercase tracking-widest">10% forever</span>
-                                </div>
-
-                                <p className="text-sm text-foreground/50 mb-6 leading-relaxed">
-                                    Share your referral link. Every time someone you referred pays for a job post, airdrop, or badge — you earn <strong className="text-foreground/80">10% of their payment</strong> in USDC, permanently.
-                                </p>
-
-                                {/* Referral link */}
-                                <div className="flex items-center gap-2 glass bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-6">
-                                    <span className="flex-1 text-xs font-mono text-foreground/50 truncate">{referralLink}</span>
-                                    <button onClick={copyReferralLink}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all shrink-0 ${copiedRef ? 'bg-accent-success/20 text-accent-success border border-accent-success/30' : 'bg-accent-primary/10 text-accent-primary border border-accent-primary/20 hover:bg-accent-primary/20'}`}>
-                                        {copiedRef ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                        {copiedRef ? 'Copied!' : 'Copy'}
-                                    </button>
-                                </div>
-
-                                {/* Earnings */}
-                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <div className="glass p-4 text-center">
-                                        <p className="text-2xl font-black text-accent-success">{referralEarnings.length}</p>
-                                        <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest mt-1">Referrals</p>
-                                    </div>
-                                    <div className="glass p-4 text-center">
-                                        <p className="text-2xl font-black text-accent-success">
-                                            ${referralEarnings.reduce((sum, r) => sum + (r.earning || 0), 0).toFixed(2)}
-                                        </p>
-                                        <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest mt-1">USDC Earned</p>
-                                    </div>
-                                </div>
-
-                                {referralEarnings.length > 0 && (
-                                    <div className="space-y-2">
-                                        {referralEarnings.slice(0, 5).map((r: any) => (
-                                            <div key={r.id} className="flex items-center justify-between text-xs px-3 py-2 bg-white/5 rounded-lg">
-                                                <span className="text-foreground/60">{r.refereeName} · {r.paymentType.replace('_', ' ')}</span>
-                                                <span className="font-black text-accent-success">+${r.earning} USDC</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <p className="text-[10px] text-foreground/20 font-bold mt-4">Earnings are paid out manually in USDC. Contact admin to claim.</p>
-                            </section>
-                        </>
-                    )}
+                            <p className="text-[10px] text-foreground/20 font-bold mt-4">Earnings are paid out manually in USDC. Contact admin to claim.</p>
+                        </section>
+                    </div>
                 </main>
             </div>
 

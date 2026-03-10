@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
 import { db } from '@/lib/firebase';
 import {
-    collection, getDocs, deleteDoc, doc, updateDoc, query, orderBy, addDoc, serverTimestamp, where
+    collection, getDocs, deleteDoc, doc, updateDoc, query, orderBy, addDoc, serverTimestamp
 } from 'firebase/firestore';
 import { JobPosting, Airdrop, TalentProfile, PaymentRecord } from '@/lib/types';
 import {
@@ -53,10 +53,8 @@ export default function AdminDashboard() {
         blockchain: '', difficulty: 'Medium', status: 'Live' as 'Live' | 'Upcoming' | 'Ended',
         type: 'Confirmed' as 'Confirmed' | 'Potential',
         fundingAmount: '', potentialReward: '', description: '',
-        tasks: [{ text: '', url: '' }] as any[],
+        tasks: [''] as string[],
     });
-    const [editingAirdropId, setEditingAirdropId] = useState<string | null>(null);
-    const [editTaskForm, setEditTaskForm] = useState<{ text: string; url: string }[]>([]);
 
     useEffect(() => {
         if (!authLoading && !isLoggedIn) {
@@ -230,7 +228,7 @@ export default function AdminDashboard() {
         try {
             await addDoc(collection(db, 'airdrops'), {
                 ...adminAirdropForm,
-                tasks: adminAirdropForm.tasks.filter(t => (typeof t === 'string' ? t.trim() : t.text.trim())),
+                tasks: adminAirdropForm.tasks.filter(t => t.trim()),
                 submittedBy: user?.id,
                 participationCount: '0',
                 paymentStatus: 'verified',
@@ -239,54 +237,10 @@ export default function AdminDashboard() {
                 updatedAt: serverTimestamp(),
             });
             setShowAirdropForm(false);
-            setAdminAirdropForm({ projectName: '', website: '', twitter: '', logoUrl: '', blockchain: '', difficulty: 'Medium', status: 'Live', type: 'Confirmed', fundingAmount: '', potentialReward: '', description: '', tasks: [{ text: '', url: '' }] as any[] });
+            setAdminAirdropForm({ projectName: '', website: '', twitter: '', logoUrl: '', blockchain: '', difficulty: 'Medium', status: 'Live', type: 'Confirmed', fundingAmount: '', potentialReward: '', description: '', tasks: [''] });
             fetchData();
         } catch { alert('Failed to post airdrop.'); }
         finally { setAirdropFormSubmitting(false); }
-    };
-
-    const handlePublishUpdate = async (airdrop: Airdrop) => {
-        if (!window.confirm(`Publish updates and notify tracked users for ${airdrop.projectName}?`)) return;
-        setLoading(true);
-        try {
-            // 1. Update Airdrop with structured tasks and lastTaskUpdate
-            const airdropRef = doc(db, 'airdrops', airdrop.id);
-            await updateDoc(airdropRef, {
-                tasks: editTaskForm.filter(t => t.text.trim()),
-                lastTaskUpdate: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-            });
-
-            // 2. Notify tracked users
-            // Find users tracking this
-            const usersSnap = await getDocs(query(collection(db, 'talents'), where('trackedAirdrops', 'array-contains', airdrop.id)));
-
-            if (!usersSnap.empty) {
-                const { writeBatch } = await import('firebase/firestore');
-                const batch = writeBatch(db);
-                usersSnap.docs.forEach(uDoc => {
-                    const notifRef = doc(collection(db, 'talents', uDoc.id, 'notifications'));
-                    batch.set(notifRef, {
-                        airdropId: airdrop.id,
-                        airdropName: airdrop.projectName,
-                        message: `⚡ ${airdrop.projectName} published new tasks! Check them out now.`,
-                        read: false,
-                        createdAt: serverTimestamp(),
-                    });
-                });
-                await batch.commit();
-                alert(`Updated and notified ${usersSnap.size} users!`);
-            } else {
-                alert('Updated! (No users are currently tracking this airdrop)');
-            }
-            setEditingAirdropId(null);
-            fetchData();
-        } catch (err) {
-            console.error(err);
-            alert('Failed to publish updates.');
-        } finally {
-            setLoading(false);
-        }
     };
 
     const pendingCount = payments.filter(p => p.status === 'pending').length;
@@ -495,50 +449,24 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Tasks */}
-                            <div className="space-y-4">
+                            <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30 flex items-center gap-1.5"><List className="w-3 h-3" /> Steps</label>
-                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, { text: '', url: '' }] }))}
+                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, ''] }))}
                                         className="text-[10px] font-black text-accent-secondary uppercase tracking-widest flex items-center gap-1">
-                                        <Plus className="w-3 h-3" /> Add Step
+                                        <Plus className="w-3 h-3" /> Add
                                     </button>
                                 </div>
                                 {adminAirdropForm.tasks.map((task, idx) => (
-                                    <div key={idx} className="glass p-4 space-y-3 border-white/5 bg-white/2 relative group/item">
-                                        <div className="flex gap-3">
-                                            <span className="text-[10px] font-black text-foreground/20 mt-3">{idx + 1}</span>
-                                            <input
-                                                type="text"
-                                                placeholder="Step description..."
-                                                value={task.text}
-                                                onChange={e => {
-                                                    const next = [...adminAirdropForm.tasks];
-                                                    next[idx] = { ...next[idx], text: e.target.value };
-                                                    setAdminAirdropForm(p => ({ ...p, tasks: next }));
-                                                }}
-                                                className="flex-1 glass bg-white/5 border-white/10 px-4 py-2.5 rounded-xl text-sm font-medium outline-none focus:border-accent-secondary/50"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: p.tasks.filter((_, i) => i !== idx) }))}
-                                                disabled={adminAirdropForm.tasks.length <= 1}
-                                                className="p-2 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0"
-                                            ><Trash2 className="w-4 h-4" /></button>
-                                        </div>
-                                        <div className="flex gap-3 items-center ml-7">
-                                            <ExternalLink className="w-3.5 h-3.5 text-accent-secondary shrink-0" />
-                                            <input
-                                                type="url"
-                                                placeholder="Optional redirect URL (https://...)"
-                                                value={task.url}
-                                                onChange={e => {
-                                                    const next = [...adminAirdropForm.tasks];
-                                                    next[idx] = { ...next[idx], url: e.target.value };
-                                                    setAdminAirdropForm(p => ({ ...p, tasks: next }));
-                                                }}
-                                                className="flex-1 glass bg-white/5 border-white/10 px-4 py-2 rounded-xl text-xs font-medium outline-none text-foreground/60 focus:border-accent-secondary/30"
-                                            />
-                                        </div>
+                                    <div key={idx} className="flex gap-2">
+                                        <input type="text" value={task} placeholder={`Step ${idx + 1}`}
+                                            onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = e.target.value; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
+                                            className="flex-grow glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-sm font-medium outline-none focus:border-accent-secondary/50" />
+                                        <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: p.tasks.filter((_, i) => i !== idx) }))}
+                                            disabled={adminAirdropForm.tasks.length <= 1}
+                                            className="p-2 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0">
+                                            <X className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 ))}
                             </div>
@@ -586,16 +514,16 @@ export default function AdminDashboard() {
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-2">
                                             <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded ${payment.type === 'user_badge' ? 'bg-accent-primary/20 text-accent-primary' :
-                                                payment.type === 'job_post' ? 'bg-accent-success/20 text-accent-success' :
-                                                    payment.type === 'airdrop_post' ? 'bg-accent-secondary/20 text-accent-secondary' :
-                                                        payment.type === 'cv_boost' ? 'bg-accent-warning/20 text-accent-warning' :
-                                                            'bg-white/10 text-foreground/50'
+                                                    payment.type === 'job_post' ? 'bg-accent-success/20 text-accent-success' :
+                                                        payment.type === 'airdrop_post' ? 'bg-accent-secondary/20 text-accent-secondary' :
+                                                            payment.type === 'cv_boost' ? 'bg-accent-warning/20 text-accent-warning' :
+                                                                'bg-white/10 text-foreground/50'
                                                 }`}>
                                                 {PAYMENT_LABELS[payment.type]}
                                             </span>
                                             <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded border ${payment.status === 'verified' ? 'border-accent-success/30 text-accent-success' :
-                                                payment.status === 'rejected' ? 'border-accent-danger/30 text-accent-danger' :
-                                                    'border-accent-warning/30 text-accent-warning'
+                                                    payment.status === 'rejected' ? 'border-accent-danger/30 text-accent-danger' :
+                                                        'border-accent-warning/30 text-accent-warning'
                                                 }`}>
                                                 {payment.status}
                                             </span>
@@ -751,16 +679,6 @@ export default function AdminDashboard() {
                                 <td className="px-6 py-6 text-right">
                                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
-                                            onClick={() => {
-                                                setEditingAirdropId(airdrop.id);
-                                                setEditTaskForm((airdrop.tasks || []).map((t: any) => typeof t === 'string' ? { text: t, url: '' } : { text: t.text, url: t.url || '' }));
-                                            }}
-                                            className="p-3 bg-accent-secondary/10 text-accent-secondary rounded-xl hover:bg-accent-secondary hover:text-white transition-all"
-                                            title="Edit Tasks"
-                                        >
-                                            <List className="w-4 h-4" />
-                                        </button>
-                                        <button
                                             onClick={() => handleFeature('airdrops', airdrop.id, !!airdrop.featured)}
                                             title={airdrop.featured ? 'Unfeature' : 'Feature'}
                                             className={`p-3 rounded-xl transition-all ${airdrop.featured ? 'bg-accent-warning/20 text-accent-warning' : 'bg-white/5 text-foreground/30 hover:bg-accent-warning/10 hover:text-accent-warning'}`}
@@ -777,6 +695,7 @@ export default function AdminDashboard() {
                                 </td>
                             </tr>
                         ))}
+
                         {/* USERS TAB */}
                         {activeTab === 'users' && filteredTalents.map(talent => (
                             <tr key={talent.id} className="hover:bg-white/5 transition-colors group">
@@ -841,98 +760,27 @@ export default function AdminDashboard() {
                     </tbody>
                 </table>
 
-                {/* Edit Tasks Modal Overlay */}
-                {editingAirdropId && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
-                        <div className="glass w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-white/10 shadow-2xl">
-                            <div className="p-6 border-b border-white/10 flex items-center justify-between">
-                                <h3 className="font-display font-black text-xl uppercase tracking-tight">Edit Guide Steps</h3>
-                                <button onClick={() => setEditingAirdropId(null)} className="p-2 hover:bg-white/5 rounded-full"><X className="w-5 h-5" /></button>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                                {editTaskForm.map((task, idx) => (
-                                    <div key={idx} className="glass p-4 space-y-3 border-white/5 bg-white/2">
-                                        <div className="flex gap-3">
-                                            <span className="text-[10px] font-black text-foreground/20 mt-3">{idx + 1}</span>
-                                            <input
-                                                type="text"
-                                                placeholder="Step description..."
-                                                value={task.text}
-                                                onChange={e => {
-                                                    const next = [...editTaskForm];
-                                                    next[idx] = { ...next[idx], text: e.target.value };
-                                                    setEditTaskForm(next);
-                                                }}
-                                                className="flex-1 glass bg-white/5 border-white/10 px-4 py-2.5 rounded-xl text-sm font-medium outline-none focus:border-accent-secondary/50"
-                                            />
-                                            <button
-                                                onClick={() => setEditTaskForm(editTaskForm.filter((_, i) => i !== idx))}
-                                                className="p-2 text-foreground/20 hover:text-accent-danger transition-colors"
-                                            ><Trash2 className="w-4 h-4" /></button>
-                                        </div>
-                                        <div className="flex gap-3 items-center ml-7">
-                                            <ExternalLink className="w-3.5 h-3.5 text-accent-secondary shrink-0" />
-                                            <input
-                                                type="url"
-                                                placeholder="Optional redirect URL (https://...)"
-                                                value={task.url}
-                                                onChange={e => {
-                                                    const next = [...editTaskForm];
-                                                    next[idx] = { ...next[idx], url: e.target.value };
-                                                    setEditTaskForm(next);
-                                                }}
-                                                className="flex-1 glass bg-white/5 border-white/10 px-4 py-2 rounded-xl text-xs font-medium outline-none text-foreground/60"
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                                <button
-                                    onClick={() => setEditTaskForm([...editTaskForm, { text: '', url: '' }])}
-                                    className="w-full py-4 border-2 border-dashed border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-foreground/20 hover:border-accent-secondary/30 hover:text-accent-secondary transition-all"
-                                >
-                                    + Add New Step
-                                </button>
-                            </div>
-                            <div className="p-6 border-t border-white/10 bg-white/5 flex gap-4">
-                                <button
-                                    onClick={() => setEditingAirdropId(null)}
-                                    className="flex-1 py-4 text-xs font-black uppercase tracking-widest text-foreground/40 hover:text-foreground"
-                                >Cancel</button>
-                                <button
-                                    onClick={() => {
-                                        const original = airdrops.find(a => a.id === editingAirdropId);
-                                        if (original) handlePublishUpdate(original);
-                                    }}
-                                    className="flex-[2] py-4 bg-accent-secondary text-white font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 shadow-lg shadow-accent-secondary/20"
-                                >Publish & Notify Users 🔥</button>
-                            </div>
-                        </div>
+                {activeCount === 0 && (
+                    <div className="py-20 text-center space-y-3">
+                        <p className="text-2xl font-black text-foreground/10 uppercase tracking-widest">Empty</p>
+                        <p className="text-foreground/30 text-sm font-medium">
+                            {search
+                                ? `No results for "${search}"`
+                                : activeTab === 'users'
+                                    ? 'No talent profiles yet. Users must complete onboarding to appear here.'
+                                    : activeTab === 'payments'
+                                        ? 'No payments yet. They will appear here when users submit.'
+                                        : `No ${activeTab} yet.`
+                            }
+                        </p>
+                        {!search && activeTab === 'users' && (
+                            <p className="text-[10px] text-foreground/20 font-bold uppercase tracking-widest">
+                                Tip: Ask users to complete /onboarding to create their profile
+                            </p>
+                        )}
                     </div>
                 )}
-
-                {
-                    activeCount === 0 && (
-                        <div className="py-20 text-center space-y-3">
-                            <p className="text-2xl font-black text-foreground/10 uppercase tracking-widest">Empty</p>
-                            <p className="text-foreground/30 text-sm font-medium">
-                                {search
-                                    ? `No results for "${search}"`
-                                    : activeTab === 'users'
-                                        ? 'No talent profiles yet. Users must complete onboarding to appear here.'
-                                        : activeTab === 'payments'
-                                            ? 'No payments yet. They will appear here when users submit.'
-                                            : `No ${activeTab} yet.`
-                                }
-                            </p>
-                            {!search && activeTab === 'users' && (
-                                <p className="text-[10px] text-foreground/20 font-bold uppercase tracking-widest">
-                                    Tip: Ask users to complete /onboarding to create their profile
-                                </p>
-                            )}
-                        </div>
-                    )
-                }
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }

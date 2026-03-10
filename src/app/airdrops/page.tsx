@@ -28,19 +28,8 @@ export default function AirdropsPage() {
                     ...doc.data()
                 })) as Airdrop[];
 
-                // Sort: featured first, then recently updated tasks, then newest
-                const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-                const getMs = (ts: any) => ts?.toDate ? ts.toDate().getTime() : ts ? new Date(ts).getTime() : 0;
-                fetchedAirdrops.sort((a, b) => {
-                    if (b.featured !== a.featured) return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
-                    const aUpdated = getMs(a.lastTaskUpdate);
-                    const bUpdated = getMs(b.lastTaskUpdate);
-                    const aNew = aUpdated > Date.now() - SEVEN_DAYS;
-                    const bNew = bUpdated > Date.now() - SEVEN_DAYS;
-                    if (aNew !== bNew) return aNew ? -1 : 1;
-                    if (aNew && bNew) return bUpdated - aUpdated;
-                    return getMs(b.createdAt) - getMs(a.createdAt);
-                });
+                // Sort: featured first
+                fetchedAirdrops.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
                 setAirdrops(fetchedAirdrops);
             } catch (err) {
                 console.error('Error fetching airdrops:', err);

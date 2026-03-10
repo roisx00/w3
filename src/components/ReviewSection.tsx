@@ -34,11 +34,10 @@ function Stars({ rating, interactive = false, onSelect }: {
                     className={`transition-colors ${interactive ? 'cursor-pointer' : 'cursor-default'}`}
                 >
                     <Star
-                        className={`w-4 h-4 transition-colors ${
-                            n <= (hover || rating)
+                        className={`w-4 h-4 transition-colors ${n <= (hover || rating)
                                 ? 'fill-accent-warning text-accent-warning'
                                 : 'text-foreground/20'
-                        }`}
+                            }`}
                     />
                 </button>
             ))}
