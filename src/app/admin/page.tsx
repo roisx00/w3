@@ -48,14 +48,19 @@ export default function AdminDashboard() {
     const [showAirdropForm, setShowAirdropForm] = useState(false);
     const [airdropFormSubmitting, setAirdropFormSubmitting] = useState(false);
     const [uploadingAdminLogo, setUploadingAdminLogo] = useState(false);
+    const [editingAirdropId, setEditingAirdropId] = useState<string | null>(null);
     const [adminAirdropForm, setAdminAirdropForm] = useState({
         projectName: '', website: '', twitter: '', logoUrl: '',
         blockchain: '', difficulty: 'Medium', status: 'Live' as 'Live' | 'Upcoming' | 'Ended',
         type: 'Confirmed' as 'Confirmed' | 'Potential',
         fundingAmount: '', potentialReward: '', description: '',
-        tasks: [''] as string[],
+        tasks: [{ text: '', url: '' }],
     });
 
+    const resetAirdropForm = () => {
+        setAdminAirdropForm({ projectName: '', website: '', twitter: '', logoUrl: '', blockchain: '', difficulty: 'Medium', status: 'Live', type: 'Confirmed', fundingAmount: '', potentialReward: '', description: '', tasks: [{ text: '', url: '' }] });
+        setEditingAirdropId(null);
+    };
     useEffect(() => {
         if (!authLoading && !isLoggedIn) {
             router.push('/');
@@ -226,21 +231,53 @@ export default function AdminDashboard() {
         e.preventDefault();
         setAirdropFormSubmitting(true);
         try {
-            await addDoc(collection(db, 'airdrops'), {
+            const validTasks = adminAirdropForm.tasks.filter(t => t.text.trim());
+            const airdropData = {
                 ...adminAirdropForm,
-                tasks: adminAirdropForm.tasks.filter(t => t.trim()),
-                submittedBy: user?.id,
-                participationCount: '0',
-                paymentStatus: 'verified',
-                isAdminPost: true,
-                createdAt: serverTimestamp(),
+                tasks: validTasks.map(t => t.url?.trim() ? t : t.text),
                 updatedAt: serverTimestamp(),
-            });
+            };
+
+            if (editingAirdropId) {
+                await updateDoc(doc(db, 'airdrops', editingAirdropId), airdropData);
+            } else {
+                await addDoc(collection(db, 'airdrops'), {
+                    ...airdropData,
+                    submittedBy: user?.id,
+                    participationCount: '0',
+                    paymentStatus: 'verified',
+                    isAdminPost: true,
+                    createdAt: serverTimestamp(),
+                });
+            }
             setShowAirdropForm(false);
-            setAdminAirdropForm({ projectName: '', website: '', twitter: '', logoUrl: '', blockchain: '', difficulty: 'Medium', status: 'Live', type: 'Confirmed', fundingAmount: '', potentialReward: '', description: '', tasks: [''] });
+            resetAirdropForm();
             fetchData();
-        } catch { alert('Failed to post airdrop.'); }
+        } catch { alert('Failed to save airdrop.'); }
         finally { setAirdropFormSubmitting(false); }
+    };
+
+    const openEditAirdrop = (airdrop: Airdrop) => {
+        setAdminAirdropForm({
+            projectName: airdrop.projectName || '',
+            website: airdrop.website || '',
+            twitter: airdrop.twitter || '',
+            logoUrl: airdrop.logoUrl || '',
+            blockchain: airdrop.blockchain || '',
+            difficulty: airdrop.difficulty || 'Medium',
+            status: airdrop.status || 'Live',
+            type: airdrop.type || 'Confirmed',
+            fundingAmount: airdrop.fundingAmount || '',
+            potentialReward: airdrop.potentialReward || '',
+            description: airdrop.description || '',
+            tasks: (airdrop.tasks?.length ? airdrop.tasks : [{ text: '', url: '' }]).map(t =>
+                typeof t === 'string' ? { text: t, url: '' } : { text: t.text, url: t.url || '' }
+            )
+        });
+        setEditingAirdropId(airdrop.id);
+        setShowAirdropForm(true);
+        setActiveTab('airdrops');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const pendingCount = payments.filter(p => p.status === 'pending').length;
@@ -370,7 +407,7 @@ export default function AdminDashboard() {
             {activeTab === 'airdrops' && (
                 <div className="mb-6">
                     <button
-                        onClick={() => setShowAirdropForm(f => !f)}
+                        onClick={() => { resetAirdropForm(); setShowAirdropForm(f => !f); }}
                         className="flex items-center gap-2 px-5 py-2.5 bg-accent-secondary/10 border border-accent-secondary/30 text-accent-secondary text-xs font-black uppercase tracking-widest rounded-xl hover:bg-accent-secondary/20 transition-colors"
                     >
                         <Plus className="w-3.5 h-3.5" /> Post Airdrop (Admin — Free)
@@ -379,8 +416,11 @@ export default function AdminDashboard() {
                     {showAirdropForm && (
                         <form onSubmit={handleAdminPostAirdrop} className="mt-4 glass p-6 space-y-4 border border-accent-secondary/20">
                             <div className="flex items-center justify-between">
-                                <p className="text-xs font-black uppercase tracking-widest text-accent-secondary flex items-center gap-2"><Sparkles className="w-3.5 h-3.5" /> New Airdrop Post</p>
-                                <button type="button" onClick={() => setShowAirdropForm(false)}><X className="w-4 h-4 text-foreground/30" /></button>
+                                <p className="text-xs font-black uppercase tracking-widest text-accent-secondary flex items-center gap-2">
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    {editingAirdropId ? 'Edit Airdrop' : 'New Airdrop Post'}
+                                </p>
+                                <button type="button" onClick={() => { setShowAirdropForm(false); resetAirdropForm(); }}><X className="w-4 h-4 text-foreground/30" /></button>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -449,22 +489,27 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Tasks */}
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30 flex items-center gap-1.5"><List className="w-3 h-3" /> Steps</label>
-                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, ''] }))}
+                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, { text: '', url: '' }] }))}
                                         className="text-[10px] font-black text-accent-secondary uppercase tracking-widest flex items-center gap-1">
-                                        <Plus className="w-3 h-3" /> Add
+                                        <Plus className="w-3 h-3" /> Add Step
                                     </button>
                                 </div>
                                 {adminAirdropForm.tasks.map((task, idx) => (
                                     <div key={idx} className="flex gap-2">
-                                        <input type="text" value={task} placeholder={`Step ${idx + 1}`}
-                                            onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = e.target.value; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
-                                            className="flex-grow glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-sm font-medium outline-none focus:border-accent-secondary/50" />
+                                        <div className="flex-grow space-y-2">
+                                            <input type="text" value={task.text} placeholder={`Step ${idx + 1}`}
+                                                onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = { ...t[idx], text: e.target.value }; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
+                                                className="w-full glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-sm font-medium outline-none focus:border-accent-secondary/50" />
+                                            <input type="text" value={task.url} placeholder="Optional URL Link (e.g. https://...)"
+                                                onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = { ...t[idx], url: e.target.value }; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
+                                                className="w-full glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-medium outline-none focus:border-accent-secondary/50 text-accent-primary placeholder:text-foreground/30" />
+                                        </div>
                                         <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: p.tasks.filter((_, i) => i !== idx) }))}
                                             disabled={adminAirdropForm.tasks.length <= 1}
-                                            className="p-2 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0">
+                                            className="p-2 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0 self-start">
                                             <X className="w-4 h-4" />
                                         </button>
                                     </div>
@@ -473,7 +518,7 @@ export default function AdminDashboard() {
 
                             <button type="submit" disabled={airdropFormSubmitting}
                                 className="w-full py-3 bg-accent-secondary text-white font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition-all disabled:opacity-50">
-                                {airdropFormSubmitting ? 'Posting...' : 'Post Airdrop (Live Instantly)'}
+                                {airdropFormSubmitting ? 'Saving...' : (editingAirdropId ? 'Save Changes' : 'Post Airdrop (Live Instantly)')}
                             </button>
                         </form>
                     )}
@@ -514,16 +559,16 @@ export default function AdminDashboard() {
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-2">
                                             <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded ${payment.type === 'user_badge' ? 'bg-accent-primary/20 text-accent-primary' :
-                                                    payment.type === 'job_post' ? 'bg-accent-success/20 text-accent-success' :
-                                                        payment.type === 'airdrop_post' ? 'bg-accent-secondary/20 text-accent-secondary' :
-                                                            payment.type === 'cv_boost' ? 'bg-accent-warning/20 text-accent-warning' :
-                                                                'bg-white/10 text-foreground/50'
+                                                payment.type === 'job_post' ? 'bg-accent-success/20 text-accent-success' :
+                                                    payment.type === 'airdrop_post' ? 'bg-accent-secondary/20 text-accent-secondary' :
+                                                        payment.type === 'cv_boost' ? 'bg-accent-warning/20 text-accent-warning' :
+                                                            'bg-white/10 text-foreground/50'
                                                 }`}>
                                                 {PAYMENT_LABELS[payment.type]}
                                             </span>
                                             <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded border ${payment.status === 'verified' ? 'border-accent-success/30 text-accent-success' :
-                                                    payment.status === 'rejected' ? 'border-accent-danger/30 text-accent-danger' :
-                                                        'border-accent-warning/30 text-accent-warning'
+                                                payment.status === 'rejected' ? 'border-accent-danger/30 text-accent-danger' :
+                                                    'border-accent-warning/30 text-accent-warning'
                                                 }`}>
                                                 {payment.status}
                                             </span>
@@ -678,6 +723,13 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="px-6 py-6 text-right">
                                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={() => openEditAirdrop(airdrop)}
+                                            title="Edit Airdrop"
+                                            className="p-3 bg-white/5 text-foreground/30 hover:bg-white/10 hover:text-foreground transition-all rounded-xl"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" /></svg>
+                                        </button>
                                         <button
                                             onClick={() => handleFeature('airdrops', airdrop.id, !!airdrop.featured)}
                                             title={airdrop.featured ? 'Unfeature' : 'Feature'}

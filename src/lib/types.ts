@@ -115,10 +115,11 @@ export interface Airdrop {
     type: 'Confirmed' | 'Potential';
     difficulty: 'Easy' | 'Medium' | 'Hard';
     participationCount: string;
-    tasks: string[]; // Simplified to string[] for the checklist UI
+    tasks: Array<{ text: string; url?: string } | string>; // Supported simple string or object with link
     taskImages?: string[]; // Optional screenshot per task (parallel array)
     featured?: boolean;
     createdAt?: any;
+    updatedAt?: any;
     paymentStatus?: 'pending' | 'verified' | 'rejected';
     paymentTxHash?: string;
     boosted?: boolean;

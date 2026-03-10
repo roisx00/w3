@@ -3,7 +3,7 @@
 import { Airdrop } from '@/lib/types';
 import { Sparkles, Users, Database, Shield, ArrowRight, CheckCircle2, BadgeCheck, Share2, Check } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 interface AirdropCardProps {
@@ -14,6 +14,20 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
     const { trackedAirdrops, toggleTrackAirdrop } = useAppContext();
     const isTracked = trackedAirdrops.includes(airdrop.id);
     const [copied, setCopied] = useState(false);
+    const [hasNewTasks, setHasNewTasks] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const lastViewedRaw = localStorage.getItem(`airdrop_viewed_${airdrop.id}`);
+            if (lastViewedRaw && (airdrop.updatedAt || airdrop.createdAt)) {
+                const lastViewed = parseInt(lastViewedRaw, 10);
+                const updateTime = (airdrop.updatedAt || airdrop.createdAt)?.toMillis?.() || 0;
+                if (updateTime > lastViewed) {
+                    setHasNewTasks(true);
+                }
+            }
+        }
+    }, [airdrop]);
 
     const handleShare = async () => {
         const url = `${window.location.origin}/airdrops/${airdrop.id}`;
@@ -46,7 +60,7 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
                         </div>
                     </div>
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
                             <h3 className="font-display font-black text-2xl tracking-tight">{airdrop.projectName}</h3>
                             {airdrop.paymentStatus === 'verified' && (
                                 <BadgeCheck className="w-5 h-5 text-blue-400 shrink-0" />
@@ -54,6 +68,11 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
                             <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-bold text-foreground/40 uppercase">
                                 {airdrop.blockchain}
                             </span>
+                            {hasNewTasks && (
+                                <span className="px-2 py-0.5 rounded bg-accent-secondary/20 border border-accent-secondary/50 text-[10px] font-black text-accent-secondary uppercase flex items-center gap-1 animate-pulse">
+                                    <Sparkles className="w-3 h-3" /> New Tasks
+                                </span>
+                            )}
                         </div>
                         <p className="text-foreground/60 text-sm max-w-md leading-relaxed">
                             {airdrop.description}
@@ -79,7 +98,7 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
                 {(airdrop.tasks ?? []).slice(0, 3).map((task, i) => (
                     <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 group-hover:border-white/10 transition-colors">
                         <div className="w-2 h-2 rounded-full bg-accent-secondary/40 shrink-0" />
-                        <span className="text-xs font-medium text-foreground/70 truncate">{task}</span>
+                        <span className="text-xs font-medium text-foreground/70 truncate">{typeof task === 'string' ? task : task.text}</span>
                     </div>
                 ))}
             </div>

@@ -19,17 +19,25 @@ export default function AirdropsPage() {
     useEffect(() => {
         async function fetchAirdrops() {
             try {
+                // Fetch all and sort in memory to avoid missing indexes and support updatedAt
                 const airdropsRef = collection(db, 'airdrops');
-                const q = query(airdropsRef, orderBy('createdAt', 'desc'));
-                const querySnapshot = await getDocs(q);
+                const querySnapshot = await getDocs(airdropsRef);
 
                 const fetchedAirdrops = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 })) as Airdrop[];
 
-                // Sort: featured first
-                fetchedAirdrops.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+                // Sort: featured first, then by updatedAt or createdAt
+                fetchedAirdrops.sort((a, b) => {
+                    if (a.featured && !b.featured) return -1;
+                    if (!a.featured && b.featured) return 1;
+
+                    const timeA = (a.updatedAt || a.createdAt)?.toMillis?.() || 0;
+                    const timeB = (b.updatedAt || b.createdAt)?.toMillis?.() || 0;
+                    return timeB - timeA;
+                });
+
                 setAirdrops(fetchedAirdrops);
             } catch (err) {
                 console.error('Error fetching airdrops:', err);

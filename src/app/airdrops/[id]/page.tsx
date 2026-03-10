@@ -26,10 +26,11 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
 
     const hasBadgeAccess = !!(user?.hasBadge || user?.hasBadgePending);
 
-    // Load completed tasks from localStorage on mount
+    // Load completed tasks and log view from localStorage on mount
     useEffect(() => {
         const saved = localStorage.getItem(`airdrop_tasks_${id}`);
         if (saved) setCompletedTasks(JSON.parse(saved));
+        localStorage.setItem(`airdrop_viewed_${id}`, Date.now().toString());
     }, [id]);
 
     useEffect(() => {
@@ -71,17 +72,21 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
         );
     }
 
-    const toggleTask = (task: string) => {
+    const toggleTask = (taskRaw: any) => {
+        const taskText = typeof taskRaw === 'string' ? taskRaw : taskRaw.text;
         if (!hasBadgeAccess) {
             setShowBadgeModal(true);
             return;
         }
         setCompletedTasks(prev => {
-            const next = prev.includes(task) ? prev.filter(t => t !== task) : [...prev, task];
+            const next = prev.includes(taskText) ? prev.filter(t => t !== taskText) : [...prev, taskText];
             localStorage.setItem(`airdrop_tasks_${id}`, JSON.stringify(next));
             return next;
         });
     };
+
+    const getTaskText = (t: any) => typeof t === 'string' ? t : t.text;
+    const getTaskUrl = (t: any) => typeof t === 'string' ? undefined : t.url;
 
     const handleBadgePayment = async (txHash: string) => {
         if (!user?.id) return;
@@ -212,39 +217,49 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                         )}
 
                         <div className="space-y-4">
-                            {airdrop.tasks.map((task, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => toggleTask(task)}
-                                    className={`w-full glass p-6 flex items-center justify-between group transition-all text-left ${hasBadgeAccess && completedTasks.includes(task)
+                            {airdrop.tasks.map((task, i) => {
+                                const isCompleted = hasBadgeAccess && completedTasks.includes(getTaskText(task));
+                                const url = getTaskUrl(task);
+                                return (
+                                    <div
+                                        key={i}
+                                        className={`w-full glass p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group transition-all text-left ${isCompleted
                                             ? 'border-accent-success/30 bg-accent-success/5'
                                             : 'hover:border-white/10'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className={`transition-colors ${!hasBadgeAccess
+                                            }`}
+                                    >
+                                        <div className="flex items-start gap-4 flex-1">
+                                            <button onClick={() => toggleTask(task)} className={`mt-0.5 transition-colors ${!hasBadgeAccess
                                                 ? 'text-foreground/10'
-                                                : completedTasks.includes(task)
-                                                    ? 'text-accent-success'
-                                                    : 'text-foreground/20 group-hover:text-foreground/40'
-                                            }`}>
-                                            {hasBadgeAccess && completedTasks.includes(task)
-                                                ? <CheckCircle2 className="w-6 h-6" />
-                                                : hasBadgeAccess
-                                                    ? <Circle className="w-6 h-6" />
-                                                    : <Lock className="w-5 h-5" />
-                                            }
+                                                : isCompleted
+                                                    ? 'text-accent-success hover:text-accent-success/80'
+                                                    : 'text-foreground/20 hover:text-foreground/40'
+                                                }`}>
+                                                {isCompleted
+                                                    ? <CheckCircle2 className="w-6 h-6" />
+                                                    : hasBadgeAccess
+                                                        ? <Circle className="w-6 h-6" />
+                                                        : <Lock className="w-5 h-5" />
+                                                }
+                                            </button>
+                                            <div className="flex-1 mt-0.5">
+                                                <span className={`block font-bold transition-colors ${hasBadgeAccess && isCompleted
+                                                    ? 'text-foreground/40 line-through'
+                                                    : 'text-foreground/80'
+                                                    }`}>
+                                                    {getTaskText(task)}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span className={`font-bold transition-colors ${hasBadgeAccess && completedTasks.includes(task)
-                                                ? 'text-foreground/40 line-through'
-                                                : 'text-foreground/80'
-                                            }`}>
-                                            {task}
-                                        </span>
+                                        {url && (
+                                            <a href={url} target="_blank" rel="noopener noreferrer"
+                                                className="flex flex-shrink-0 items-center justify-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors w-full sm:w-auto mt-2 sm:mt-0">
+                                                Redirect <ExternalLink className="w-3.5 h-3.5" />
+                                            </a>
+                                        )}
                                     </div>
-                                    <ExternalLink className="w-4 h-4 text-foreground/10 group-hover:text-foreground/30 transition-colors" />
-                                </button>
-                            ))}
+                                )
+                            })}
                         </div>
                     </section>
 
