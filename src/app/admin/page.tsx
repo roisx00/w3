@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
     collection, getDocs, deleteDoc, doc, updateDoc, query, orderBy, addDoc, serverTimestamp
 } from 'firebase/firestore';
@@ -54,11 +55,11 @@ export default function AdminDashboard() {
         blockchain: '', difficulty: 'Medium', status: 'Live' as 'Live' | 'Upcoming' | 'Ended',
         type: 'Confirmed' as 'Confirmed' | 'Potential',
         fundingAmount: '', potentialReward: '', description: '',
-        tasks: [{ text: '', url: '', linkText: '' }],
+        tasks: [{ text: '', url: '', linkText: '', imageUrl: '' }],
     });
 
     const resetAirdropForm = () => {
-        setAdminAirdropForm({ projectName: '', website: '', twitter: '', logoUrl: '', blockchain: '', difficulty: 'Medium', status: 'Live', type: 'Confirmed', fundingAmount: '', potentialReward: '', description: '', tasks: [{ text: '', url: '', linkText: '' }] });
+        setAdminAirdropForm({ projectName: '', website: '', twitter: '', logoUrl: '', blockchain: '', difficulty: 'Medium', status: 'Live', type: 'Confirmed', fundingAmount: '', potentialReward: '', description: '', tasks: [{ text: '', url: '', linkText: '', imageUrl: '' }] });
         setEditingAirdropId(null);
     };
     useEffect(() => {
@@ -270,8 +271,8 @@ export default function AdminDashboard() {
             fundingAmount: airdrop.fundingAmount || '',
             potentialReward: airdrop.potentialReward || '',
             description: airdrop.description || '',
-            tasks: (airdrop.tasks?.length ? airdrop.tasks : [{ text: '', url: '', linkText: '' }]).map(t =>
-                typeof t === 'string' ? { text: t, url: '', linkText: '' } : { text: t.text, url: t.url || '', linkText: t.linkText || '' }
+            tasks: (airdrop.tasks?.length ? airdrop.tasks : [{ text: '', url: '', linkText: '', imageUrl: '' }]).map(t =>
+                typeof t === 'string' ? { text: t, url: '', linkText: '', imageUrl: '' } : { text: t.text, url: t.url || '', linkText: t.linkText || '', imageUrl: t.imageUrl || '' }
             )
         });
         setEditingAirdropId(airdrop.id);
@@ -492,7 +493,7 @@ export default function AdminDashboard() {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30 flex items-center gap-1.5"><List className="w-3 h-3" /> Steps</label>
-                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, { text: '', url: '', linkText: '' }] }))}
+                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, { text: '', url: '', linkText: '', imageUrl: '' }] }))}
                                         className="text-[10px] font-black text-accent-secondary uppercase tracking-widest flex items-center gap-1">
                                         <Plus className="w-3 h-3" /> Add Step
                                     </button>
@@ -506,10 +507,29 @@ export default function AdminDashboard() {
                                             <div className="flex flex-col sm:flex-row gap-3">
                                                 <input type="text" value={task.url} placeholder="Target URL (e.g. https://...)"
                                                     onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = { ...t[idx], url: e.target.value }; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
-                                                    className="w-full sm:w-1/2 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-medium outline-none focus:border-accent-secondary/50 text-accent-primary placeholder:text-foreground/30" />
+                                                    className="w-full sm:w-1/3 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-medium outline-none focus:border-accent-secondary/50 text-accent-primary placeholder:text-foreground/30" />
                                                 <input type="text" value={task.linkText || ''} placeholder="Specific word to link (e.g. 'website')"
                                                     onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = { ...t[idx], linkText: e.target.value }; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
-                                                    className="w-full sm:w-1/2 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-medium outline-none focus:border-accent-secondary/50 text-accent-secondary placeholder:text-foreground/30" />
+                                                    className="w-full sm:w-1/3 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-medium outline-none focus:border-accent-secondary/50 text-accent-secondary placeholder:text-foreground/30" />
+                                                <div className="w-full sm:w-1/3 flex items-center gap-2">
+                                                    {task.imageUrl && <img src={task.imageUrl} alt="" className="w-8 h-8 rounded shrink-0 object-cover" />}
+                                                    <label className="flex-1 flex items-center justify-center gap-1.5 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl cursor-pointer hover:border-accent-secondary/30 text-xs font-bold text-foreground/50 transition-colors truncate">
+                                                        <ImagePlus className="w-3.5 h-3.5 shrink-0" />
+                                                        <span className="truncate">{task.imageUrl ? 'Change Image' : 'Attach Image'}</span>
+                                                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (!file) return;
+                                                            try {
+                                                                const sRef = ref(storage, `tasks/${Date.now()}_${file.name}`);
+                                                                await uploadBytes(sRef, file);
+                                                                const url = await getDownloadURL(sRef);
+                                                                const t = [...adminAirdropForm.tasks];
+                                                                t[idx] = { ...t[idx], imageUrl: url };
+                                                                setAdminAirdropForm(p => ({ ...p, tasks: t }));
+                                                            } catch (err) { console.error('Error uploading task image', err); }
+                                                        }} />
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
                                         <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: p.tasks.filter((_, i) => i !== idx) }))}

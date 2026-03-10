@@ -115,8 +115,8 @@ export interface Airdrop {
     type: 'Confirmed' | 'Potential';
     difficulty: 'Easy' | 'Medium' | 'Hard';
     participationCount: string;
-    tasks: Array<{ text: string; url?: string; linkText?: string } | string>; // Supported simple string or object with link
-    taskImages?: string[]; // Optional screenshot per task (parallel array)
+    tasks: Array<{ text: string; url?: string; linkText?: string; imageUrl?: string } | string>; // Supported simple string or object with link/image
+    taskImages?: string[]; // Optional screenshot per task (parallel array) - deprecated, moving to per-task object
     featured?: boolean;
     createdAt?: any;
     updatedAt?: any;

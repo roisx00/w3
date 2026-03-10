@@ -222,6 +222,7 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                                 const text = getTaskText(task);
                                 const url = getTaskUrl(task);
                                 const linkText = typeof task === 'string' ? undefined : task.linkText;
+                                const imageUrl = typeof task === 'string' ? undefined : task.imageUrl;
 
                                 let renderedText: React.ReactNode = text;
                                 if (url && linkText && text.includes(linkText)) {
@@ -246,7 +247,7 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                                             }`}
                                     >
                                         <div className="flex items-start gap-4 flex-1">
-                                            <button onClick={() => toggleTask(task)} className={`mt-0.5 transition-colors ${!hasBadgeAccess
+                                            <button onClick={() => toggleTask(task)} className={`mt-0.5 transition-colors shrink-0 ${!hasBadgeAccess
                                                 ? 'text-foreground/10'
                                                 : isCompleted
                                                     ? 'text-accent-success hover:text-accent-success/80'
@@ -259,13 +260,18 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                                                         : <Lock className="w-5 h-5" />
                                                 }
                                             </button>
-                                            <div className="flex-1 mt-0.5">
+                                            <div className="flex-1 mt-0.5 space-y-4">
                                                 <span className={`block font-bold transition-colors ${hasBadgeAccess && isCompleted
                                                     ? 'text-foreground/40 line-through'
                                                     : 'text-foreground/80'
                                                     }`}>
                                                     {renderedText}
                                                 </span>
+                                                {imageUrl && (
+                                                    <div className="relative w-full max-w-2xl rounded-xl overflow-hidden border border-white/10 group-hover:border-white/20 transition-colors">
+                                                        <img src={imageUrl} alt="Guide Reference" className="w-full h-auto object-cover" />
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                         {url && !linkText && (
