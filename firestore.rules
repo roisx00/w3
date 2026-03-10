@@ -52,6 +52,14 @@ service cloud.firestore {
         && (resource.data.submittedBy == request.auth.uid || isAdmin());
     }
 
+    // ─── Referrals ────────────────────────────────────────────────────────────
+    match /referrals/{refId} {
+      allow read: if request.auth != null
+        && (request.auth.uid == resource.data.referrerId || isAdmin());
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && isAdmin();
+    }
+
     // ─── Applications ─────────────────────────────────────────────────────────
     match /applications/{appId} {
       allow read: if request.auth != null

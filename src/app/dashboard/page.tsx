@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { checkBadgePromo } from '@/lib/promos';
 import { JobPosting, Airdrop } from '@/lib/types';
-import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio } from 'lucide-react';
+import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import { PRICES } from '@/lib/payments';
 import Link from 'next/link';
@@ -22,7 +22,7 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-    const { user, bookmarkedJobs, trackedAirdrops, updateProfile } = useAppContext();
+    const { user, bookmarkedJobs, trackedAirdrops, updateProfile, logReferralEarning } = useAppContext();
     const [savedJobsData, setSavedJobsData] = useState<JobPosting[]>([]);
     const [trackedAirdropsData, setTrackedAirdropsData] = useState<Airdrop[]>([]);
     const [showBadgeModal, setShowBadgeModal] = useState(false);
@@ -31,6 +31,31 @@ function DashboardContent() {
     const [isBadgePromoFree, setIsBadgePromoFree] = useState(false);
     const [badgesRemaining, setBadgesRemaining] = useState(0);
     const [applications, setApplications] = useState<any[]>([]);
+    const [referralEarnings, setReferralEarnings] = useState<any[]>([]);
+    const [copiedRef, setCopiedRef] = useState(false);
+
+    const referralLink = user?.id
+        ? `${typeof window !== 'undefined' ? window.location.origin : 'https://w3hub.space'}?ref=${user.id}`
+        : '';
+
+    const copyReferralLink = () => {
+        if (!referralLink) return;
+        navigator.clipboard.writeText(referralLink);
+        setCopiedRef(true);
+        setTimeout(() => setCopiedRef(false), 2500);
+    };
+
+    // Fetch referral earnings
+    useEffect(() => {
+        if (!user?.id) return;
+        getDocs(query(
+            collection(db, 'referrals'),
+            where('referrerId', '==', user.id),
+            orderBy('createdAt', 'desc')
+        )).then(snap => {
+            setReferralEarnings(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        }).catch(() => {});
+    }, [user?.id]);
 
     // Fetch applications received for jobs this user posted
     useEffect(() => {
@@ -119,6 +144,7 @@ function DashboardContent() {
             });
             await updateDoc(doc(db, 'talents', user.id), { hasBadge: true, hasBadgePending: false, badgeTxHash: txHash });
             updateProfile({ hasBadge: true, hasBadgePending: false, badgeTxHash: txHash } as any);
+            await logReferralEarning('user_badge', PRICES.USER_BADGE, txHash, user as any);
             setShowBadgeModal(false);
         } catch (err) {
             alert('Failed to activate badge. Please try again.');
@@ -363,6 +389,56 @@ function DashboardContent() {
                                 </div>
                             </section>
                         )}
+
+                        {/* Referral Program */}
+                        <section className="glass p-8 border-accent-primary/20 bg-accent-primary/5">
+                            <div className="flex items-center gap-3 mb-6">
+                                <Gift className="w-5 h-5 text-accent-primary" />
+                                <h4 className="font-display font-black text-xl">Referral Program</h4>
+                                <span className="px-2 py-0.5 bg-accent-primary/20 text-accent-primary text-[10px] font-black rounded-full uppercase tracking-widest">10% forever</span>
+                            </div>
+
+                            <p className="text-sm text-foreground/50 mb-6 leading-relaxed">
+                                Share your referral link. Every time someone you referred pays for a job post, airdrop, or badge — you earn <strong className="text-foreground/80">10% of their payment</strong> in USDC, permanently.
+                            </p>
+
+                            {/* Referral link */}
+                            <div className="flex items-center gap-2 glass bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-6">
+                                <span className="flex-1 text-xs font-mono text-foreground/50 truncate">{referralLink}</span>
+                                <button onClick={copyReferralLink}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all shrink-0 ${copiedRef ? 'bg-accent-success/20 text-accent-success border border-accent-success/30' : 'bg-accent-primary/10 text-accent-primary border border-accent-primary/20 hover:bg-accent-primary/20'}`}>
+                                    {copiedRef ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                    {copiedRef ? 'Copied!' : 'Copy'}
+                                </button>
+                            </div>
+
+                            {/* Earnings */}
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div className="glass p-4 text-center">
+                                    <p className="text-2xl font-black text-accent-success">{referralEarnings.length}</p>
+                                    <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest mt-1">Referrals</p>
+                                </div>
+                                <div className="glass p-4 text-center">
+                                    <p className="text-2xl font-black text-accent-success">
+                                        ${referralEarnings.reduce((sum, r) => sum + (r.earning || 0), 0).toFixed(2)}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest mt-1">USDC Earned</p>
+                                </div>
+                            </div>
+
+                            {referralEarnings.length > 0 && (
+                                <div className="space-y-2">
+                                    {referralEarnings.slice(0, 5).map((r: any) => (
+                                        <div key={r.id} className="flex items-center justify-between text-xs px-3 py-2 bg-white/5 rounded-lg">
+                                            <span className="text-foreground/60">{r.refereeName} · {r.paymentType.replace('_', ' ')}</span>
+                                            <span className="font-black text-accent-success">+${r.earning} USDC</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <p className="text-[10px] text-foreground/20 font-bold mt-4">Earnings are paid out manually in USDC. Contact admin to claim.</p>
+                        </section>
                     </div>
                 </main>
             </div>

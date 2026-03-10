@@ -21,7 +21,7 @@ export default function PostJobPage() {
 
 function PostJobForm() {
     const router = useRouter();
-    const { user } = useAppContext();
+    const { user, logReferralEarning } = useAppContext();
     const [loading, setLoading] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -146,8 +146,9 @@ function PostJobForm() {
                 createdAt: serverTimestamp(),
             });
 
+            await logReferralEarning('job_post', PRICES.JOB_POST, txHash, user as any);
             setShowPaymentModal(false);
-            setSuccessFree(true);  // reuse "live" success screen
+            setSuccessFree(true);
             setSuccess(true);
         } catch (err) {
             console.error('Error posting job:', err);

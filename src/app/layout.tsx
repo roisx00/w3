@@ -3,6 +3,8 @@ import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { AppProvider } from "@/context/AppContext";
+import { Suspense } from "react";
+import ReferralCapture from "@/components/ReferralCapture";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -47,6 +49,9 @@ export default function RootLayout({
         className={`${inter.variable} ${outfit.variable} font-sans antialiased bg-background text-foreground`}
       >
         <AppProvider>
+          <Suspense fallback={null}>
+            <ReferralCapture />
+          </Suspense>
           <Navbar />
           <main className="pt-24 min-h-screen">
             {children}

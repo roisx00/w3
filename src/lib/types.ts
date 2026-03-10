@@ -46,6 +46,21 @@ export interface TalentProfile {
     profileScore?: number;      // 0–60, computed from profile completeness
     reputationScore?: number;   // 0–100, blend of profileScore + reviews
     reviewCount?: number;
+    referredBy?: string;        // userId of referrer
+}
+
+export interface ReferralEarning {
+    id: string;
+    referrerId: string;
+    referrerName: string;
+    refereeId: string;
+    refereeName: string;
+    paymentType: string;
+    originalAmount: number;
+    earning: number;            // 10% of originalAmount
+    txHash: string;
+    status: 'pending';          // admin pays out in USDC
+    createdAt?: any;
 }
 
 export interface Review {

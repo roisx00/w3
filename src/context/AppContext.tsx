@@ -16,6 +16,8 @@ import {
     doc,
     getDoc,
     setDoc,
+    addDoc,
+    collection,
     serverTimestamp
 } from 'firebase/firestore';
 
@@ -32,6 +34,7 @@ interface AppState {
     toggleBookmarkJob: (jobId: string) => void;
     toggleTrackAirdrop: (airdropId: string) => void;
     updateProfile: (profile: Partial<TalentProfile>) => void;
+    logReferralEarning: (paymentType: string, amount: number, txHash: string, payer: TalentProfile) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -92,6 +95,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                             localStorage.setItem('hub_tracked_airdrops', JSON.stringify(data.trackedAirdrops));
                         }
                     } else {
+                        // New user — check if they came via a referral link
+                        const refCode = typeof window !== 'undefined' ? localStorage.getItem('hub_ref') : null;
+                        if (refCode && refCode !== firebaseUser.uid) {
+                            shellUser.referredBy = refCode;
+                            // Save basic doc so referredBy is persisted
+                            await setDoc(doc(db, 'talents', firebaseUser.uid), { referredBy: refCode }, { merge: true });
+                            localStorage.removeItem('hub_ref'); // consume it
+                        }
                         setUser(shellUser);
                     }
                 } catch (e) {
@@ -123,6 +134,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const registerWithEmail = async (email: string, password: string) => {
         await createUserWithEmailAndPassword(auth, email, password);
+    };
+
+    // Log a 10% referral earning when a referred user makes a payment
+    const logReferralEarning = async (paymentType: string, originalAmount: number, txHash: string, payer: TalentProfile) => {
+        if (!payer.referredBy) return;
+        try {
+            const referrerDoc = await getDoc(doc(db, 'talents', payer.referredBy));
+            if (!referrerDoc.exists()) return;
+            const referrerData = referrerDoc.data();
+            await addDoc(collection(db, 'referrals'), {
+                referrerId: payer.referredBy,
+                referrerName: referrerData.displayName || 'Unknown',
+                refereeId: payer.id,
+                refereeName: payer.displayName || 'Unknown',
+                paymentType,
+                originalAmount,
+                earning: Math.round(originalAmount * 0.1 * 100) / 100,
+                txHash,
+                status: 'pending',
+                createdAt: serverTimestamp(),
+            });
+        } catch { /* silent */ }
     };
 
     const logout = async () => {
@@ -227,6 +260,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             toggleBookmarkJob,
             toggleTrackAirdrop,
             updateProfile,
+            logReferralEarning,
         }}>
             {children}
         </AppContext.Provider>

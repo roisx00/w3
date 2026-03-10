@@ -20,7 +20,7 @@ export default function SubmitAirdropPage() {
 
 function SubmitAirdropForm() {
     const router = useRouter();
-    const { user } = useAppContext();
+    const { user, logReferralEarning } = useAppContext();
     const [loading, setLoading] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingStepImage, setUploadingStepImage] = useState<Record<number, boolean>>({});
@@ -145,6 +145,7 @@ function SubmitAirdropForm() {
                 createdAt: serverTimestamp(),
             });
 
+            await logReferralEarning('airdrop_post', PRICES.AIRDROP_POST, txHash, user as any);
             setShowPaymentModal(false);
             setSuccess(true);
         } catch (err) {
