@@ -1,9 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { JobPosting } from '@/lib/types';
-import { Briefcase, MapPin, DollarSign, Clock, ArrowRight, Bookmark, BadgeCheck } from 'lucide-react';
+import { Briefcase, MapPin, DollarSign, Clock, ArrowRight, Bookmark, BadgeCheck, Users } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
 import Link from 'next/link';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 interface JobCardProps {
     job: JobPosting & { createdAt?: any };
@@ -22,6 +25,16 @@ function timeAgo(timestamp: any): string {
 const JobCard = ({ job }: JobCardProps) => {
     const { bookmarkedJobs, toggleBookmarkJob } = useAppContext();
     const isBookmarked = bookmarkedJobs.includes(job.id);
+    const [applicantCount, setApplicantCount] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (!job.id) return;
+        const q = query(collection(db, 'applications'), where('jobId', '==', job.id));
+        const unsub = onSnapshot(q, (snap) => {
+            setApplicantCount(snap.size);
+        });
+        return () => unsub();
+    }, [job.id]);
 
     return (
         <div className="glass p-6 hover:shadow-[0_0_20px_rgba(0,242,255,0.1)] transition-all group border-white/5 hover:border-accent-primary/20 flex flex-col md:flex-row gap-6 items-start md:items-center relative overflow-hidden h-full">
@@ -67,6 +80,16 @@ const JobCard = ({ job }: JobCardProps) => {
                 <div className="flex items-center gap-2 text-xs font-bold text-accent-success uppercase tracking-widest">
                     <DollarSign className="w-3 h-3" />
                     {job.paymentConfig.amount} {job.paymentConfig.currency}
+                </div>
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest" title="Total applicants">
+                    <Users className="w-3 h-3 text-accent-primary/70" />
+                    {applicantCount === null ? (
+                        <span className="text-foreground/20">...</span>
+                    ) : (
+                        <span className={applicantCount > 0 ? 'text-accent-primary' : 'text-foreground/30'}>
+                            {applicantCount} {applicantCount === 1 ? 'Applicant' : 'Applicants'}
+                        </span>
+                    )}
                 </div>
             </div>
 

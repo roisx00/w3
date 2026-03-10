@@ -2,12 +2,12 @@
 
 import { use, useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { JobPosting } from '@/lib/types';
 import {
     Briefcase, MapPin, DollarSign, Clock,
     ArrowLeft, Globe, Twitter, Share2,
-    ShieldCheck, Info, CheckCircle2
+    ShieldCheck, Info, CheckCircle2, Users
 } from 'lucide-react';
 import Link from 'next/link';
 import ApplyModal from '@/components/ApplyModal';
@@ -19,6 +19,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const [job, setJob] = useState<JobPosting | null>(null);
     const [loading, setLoading] = useState(true);
     const [showApplyModal, setShowApplyModal] = useState(false);
+    const [applicantCount, setApplicantCount] = useState<number | null>(null);
 
     useEffect(() => {
         async function fetchJob() {
@@ -39,6 +40,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             }
         }
         fetchJob();
+    }, [id]);
+
+    // Real-time applicant count
+    useEffect(() => {
+        if (!id) return;
+        const q = query(collection(db, 'applications'), where('jobId', '==', id));
+        const unsub = onSnapshot(q, (snap) => {
+            setApplicantCount(snap.size);
+        });
+        return () => unsub();
     }, [id]);
 
     if (loading) {
@@ -96,7 +107,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-white/5">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 pt-8 border-t border-white/5">
                             <div>
                                 <p className="text-[10px] font-bold text-foreground/20 uppercase mb-1">Duration</p>
                                 <p className="font-black text-sm">{job.duration}</p>
@@ -112,6 +123,19 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                             <div>
                                 <p className="text-[10px] font-bold text-foreground/20 uppercase mb-1">Method</p>
                                 <p className="font-black text-sm">{job.paymentConfig.type}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-foreground/20 uppercase mb-1">Applicants</p>
+                                <div className="flex items-center gap-1.5">
+                                    <Users className="w-3.5 h-3.5 text-accent-primary/70" />
+                                    {applicantCount === null ? (
+                                        <span className="font-black text-sm text-foreground/20">–</span>
+                                    ) : (
+                                        <span className={`font-black text-sm ${applicantCount > 0 ? 'text-accent-primary' : 'text-foreground/40'}`}>
+                                            {applicantCount}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </header>
