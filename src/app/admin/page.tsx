@@ -495,24 +495,50 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Tasks */}
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/30 flex items-center gap-1.5"><List className="w-3 h-3" /> Steps</label>
-                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, ''] }))}
+                                    <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: [...p.tasks, { text: '', url: '' }] }))}
                                         className="text-[10px] font-black text-accent-secondary uppercase tracking-widest flex items-center gap-1">
-                                        <Plus className="w-3 h-3" /> Add
+                                        <Plus className="w-3 h-3" /> Add Step
                                     </button>
                                 </div>
                                 {adminAirdropForm.tasks.map((task, idx) => (
-                                    <div key={idx} className="flex gap-2">
-                                        <input type="text" value={task} placeholder={`Step ${idx + 1}`}
-                                            onChange={e => { const t = [...adminAirdropForm.tasks]; t[idx] = e.target.value; setAdminAirdropForm(p => ({ ...p, tasks: t })); }}
-                                            className="flex-grow glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-sm font-medium outline-none focus:border-accent-secondary/50" />
-                                        <button type="button" onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: p.tasks.filter((_, i) => i !== idx) }))}
-                                            disabled={adminAirdropForm.tasks.length <= 1}
-                                            className="p-2 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0">
-                                            <X className="w-4 h-4" />
-                                        </button>
+                                    <div key={idx} className="glass p-4 space-y-3 border-white/5 bg-white/2 relative group/item">
+                                        <div className="flex gap-3">
+                                            <span className="text-[10px] font-black text-foreground/20 mt-3">{idx + 1}</span>
+                                            <input
+                                                type="text"
+                                                placeholder="Step description..."
+                                                value={task.text}
+                                                onChange={e => {
+                                                    const next = [...adminAirdropForm.tasks];
+                                                    next[idx] = { ...next[idx], text: e.target.value };
+                                                    setAdminAirdropForm(p => ({ ...p, tasks: next }));
+                                                }}
+                                                className="flex-1 glass bg-white/5 border-white/10 px-4 py-2.5 rounded-xl text-sm font-medium outline-none focus:border-accent-secondary/50"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setAdminAirdropForm(p => ({ ...p, tasks: p.tasks.filter((_, i) => i !== idx) }))}
+                                                disabled={adminAirdropForm.tasks.length <= 1}
+                                                className="p-2 text-foreground/20 hover:text-accent-danger transition-colors disabled:opacity-0"
+                                            ><Trash2 className="w-4 h-4" /></button>
+                                        </div>
+                                        <div className="flex gap-3 items-center ml-7">
+                                            <ExternalLink className="w-3.5 h-3.5 text-accent-secondary shrink-0" />
+                                            <input
+                                                type="url"
+                                                placeholder="Optional redirect URL (https://...)"
+                                                value={task.url}
+                                                onChange={e => {
+                                                    const next = [...adminAirdropForm.tasks];
+                                                    next[idx] = { ...next[idx], url: e.target.value };
+                                                    setAdminAirdropForm(p => ({ ...p, tasks: next }));
+                                                }}
+                                                className="flex-1 glass bg-white/5 border-white/10 px-4 py-2 rounded-xl text-xs font-medium outline-none text-foreground/60 focus:border-accent-secondary/30"
+                                            />
+                                        </div>
                                     </div>
                                 ))}
                             </div>
