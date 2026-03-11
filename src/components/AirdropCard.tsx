@@ -46,21 +46,21 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
             {/* Background Glow */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-accent-secondary/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent-secondary/10 transition-colors" />
 
-            <div className="flex flex-col md:flex-row justify-between gap-8 mb-8">
-                <div className="flex items-start gap-6">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 shrink-0 group-hover:scale-110 transition-transform duration-500 relative">
+            <div className="flex flex-col md:flex-row justify-between gap-6 md:gap-8 mb-2 md:mb-8">
+                <div className="flex items-start gap-4 md:gap-6">
+                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 shrink-0 group-hover:scale-110 transition-transform duration-500 relative">
                         {airdrop.logoUrl ? (
                             <img src={airdrop.logoUrl} alt={airdrop.projectName} className="w-full h-full object-cover rounded-xl" />
                         ) : (
-                            <Sparkles className="w-8 h-8 text-accent-secondary" />
+                            <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-accent-secondary" />
                         )}
-                        <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-2 border-background flex items-center justify-center ${airdrop.status === 'Live' ? 'bg-accent-success' : 'bg-accent-warning'
+                        <div className={`absolute -bottom-2 -right-2 w-5 h-5 md:w-6 md:h-6 rounded-full border-2 border-background flex items-center justify-center ${airdrop.status === 'Live' ? 'bg-accent-success' : 'bg-accent-warning'
                             }`}>
-                            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                            <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white animate-pulse" />
                         </div>
                     </div>
                     <div>
-                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <div className="flex items-center gap-2 md:gap-3 mb-2 flex-wrap">
                             <h3 className="font-display font-black text-2xl tracking-tight">{airdrop.projectName}</h3>
                             {airdrop.paymentStatus === 'verified' && (
                                 <BadgeCheck className="w-5 h-5 text-blue-400 shrink-0" />
@@ -80,12 +80,12 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
                     </div>
                 </div>
 
-                <div className="flex flex-row md:flex-col gap-4 text-right justify-end md:justify-start">
-                    <div className="flex flex-col">
+                <div className="flex flex-row md:flex-col gap-6 md:gap-4 justify-start md:justify-end border-t border-white/5 md:border-none pt-4 md:pt-0 mt-2 md:mt-0">
+                    <div className="flex flex-col text-left md:text-right">
                         <span className="text-[10px] font-bold text-foreground/20 uppercase tracking-widest">Rewards</span>
-                        <span className="text-xl font-black text-accent-success">{airdrop.potentialReward}</span>
+                        <span className="text-lg md:text-xl font-black text-accent-success">{airdrop.potentialReward}</span>
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col text-left md:text-right">
                         <span className="text-[10px] font-bold text-foreground/20 uppercase tracking-widest">Difficulty</span>
                         <span className={`text-sm font-bold ${airdrop.difficulty === 'Easy' ? 'text-accent-success' : airdrop.difficulty === 'Medium' ? 'text-accent-warning' : 'text-accent-secondary'
                             }`}>{airdrop.difficulty}</span>
@@ -93,43 +93,9 @@ const AirdropCard = ({ airdrop }: AirdropCardProps) => {
                 </div>
             </div>
 
-            {/* Task List Preview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                {(airdrop.tasks ?? []).slice(0, 3).map((task, i) => {
-                    const text = typeof task === 'string' ? task : task.text;
-                    const url = typeof task === 'string' ? undefined : task.url;
-                    const linkText = typeof task === 'string' ? undefined : task.linkText;
-
-                    let renderedText: React.ReactNode = text;
-                    if (url && linkText && text.includes(linkText)) {
-                        const parts = text.split(linkText);
-                        renderedText = (
-                            <>
-                                {parts[0]}
-                                <a href={url} target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline relative z-10" onClick={(e) => e.stopPropagation()}>
-                                    {linkText}
-                                </a>
-                                {parts.slice(1).join(linkText)}
-                            </>
-                        );
-                    }
-
-                    return (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 group-hover:border-white/10 transition-colors">
-                            <div className="w-2 h-2 rounded-full bg-accent-secondary/40 shrink-0" />
-                            <span className="text-xs font-medium text-foreground/70 truncate">{renderedText}</span>
-                        </div>
-                    );
-                })}
-            </div>
-
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-white/5">
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
-                        <Users className="w-3 h-3 text-accent-primary" />
-                        {airdrop.participationCount} Participants
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
+                <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-4 sm:gap-6">
+                    <div className="flex items-center gap-1.5 md:gap-2 text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
                         <Database className="w-3 h-3 text-accent-success" />
                         {airdrop.fundingAmount} Raised
                     </div>
