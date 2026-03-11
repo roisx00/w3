@@ -21,7 +21,7 @@ export default function TalentsPage() {
         async function fetchTalents() {
             try {
                 const talentsRef = collection(db, 'talents');
-                const q = query(talentsRef, orderBy('score', 'desc'));
+                const q = query(talentsRef, orderBy('updatedAt', 'desc'));
                 const querySnapshot = await getDocs(q);
 
                 const fetchedTalents = querySnapshot.docs.map(doc => ({
@@ -29,8 +29,15 @@ export default function TalentsPage() {
                     ...doc.data()
                 })) as TalentProfile[];
 
-                // Sort: cvBoosted talents first
-                fetchedTalents.sort((a, b) => (b.cvBoosted ? 1 : 0) - (a.cvBoosted ? 1 : 0));
+                // Sort: score first, then cvBoosted
+                fetchedTalents.sort((a, b) => {
+                    const scoreA = typeof a.score === 'number' ? a.score : 0;
+                    const scoreB = typeof b.score === 'number' ? b.score : 0;
+                    if (scoreA !== scoreB) {
+                        return scoreB - scoreA; // descending
+                    }
+                    return (b.cvBoosted ? 1 : 0) - (a.cvBoosted ? 1 : 0);
+                });
                 setTalents(fetchedTalents);
             } catch (err) {
                 console.error('Error fetching talents:', err);
@@ -97,8 +104,8 @@ export default function TalentsPage() {
                     <button
                         onClick={() => setFilterOpenToWork(f => !f)}
                         className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shrink-0 ${filterOpenToWork
-                                ? 'bg-accent-success/15 border border-accent-success/40 text-accent-success'
-                                : 'bg-white/5 border border-white/5 text-foreground/40 hover:border-white/10'
+                            ? 'bg-accent-success/15 border border-accent-success/40 text-accent-success'
+                            : 'bg-white/5 border border-white/5 text-foreground/40 hover:border-white/10'
                             }`}
                     >
                         <Radio className="w-3.5 h-3.5" />
