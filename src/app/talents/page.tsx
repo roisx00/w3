@@ -31,8 +31,8 @@ export default function TalentsPage() {
 
                 // Sort: score first, then cvBoosted
                 fetchedTalents.sort((a, b) => {
-                    const scoreA = typeof a.score === 'number' ? a.score : 0;
-                    const scoreB = typeof b.score === 'number' ? b.score : 0;
+                    const scoreA = a.reputationScore ?? a.profileScore ?? a.score ?? 0;
+                    const scoreB = b.reputationScore ?? b.profileScore ?? b.score ?? 0;
                     if (scoreA !== scoreB) {
                         return scoreB - scoreA; // descending
                     }
