@@ -237,7 +237,7 @@ export default function AdminDashboard() {
             const validTasks = adminAirdropForm.tasks.filter(t => t.text.trim());
             const airdropData = {
                 ...adminAirdropForm,
-                tasks: validTasks.map(t => t.url?.trim() ? t : t.text),
+                tasks: validTasks.map(t => (t.url?.trim() || t.imageUrl?.trim()) ? t : t.text),
                 updatedAt: serverTimestamp(),
             };
 

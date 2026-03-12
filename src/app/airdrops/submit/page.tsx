@@ -122,8 +122,17 @@ function SubmitAirdropForm() {
     const handlePaymentConfirm = async (txHash: string) => {
         setLoading(true);
         try {
+            // Combine tasks and taskImages into the standard Airdrop.tasks format (array of objects)
+            const combinedTasks = formData.tasks
+                .map((text, idx) => ({
+                    text,
+                    imageUrl: formData.taskImages[idx] || undefined
+                }))
+                .filter(t => t.text.trim());
+
             const airdropRef = await addDoc(collection(db, 'airdrops'), {
                 ...formData,
+                tasks: combinedTasks,
                 submittedBy: user?.id,
                 participationCount: '0',
                 paymentStatus: 'verified',
