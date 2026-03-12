@@ -308,12 +308,6 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2 text-xs font-bold text-foreground/60">
-                                            <Users className="w-3 h-3 text-accent-primary" /> Participants
-                                        </div>
-                                        <span className="text-xs font-black">{airdrop.participationCount}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-foreground/60">
                                             <Shield className="w-3 h-3 text-accent-success" /> Confidence
                                         </div>
                                         <span className={`text-xs font-black ${airdrop.type === 'Confirmed' ? 'text-accent-success' : 'text-accent-warning'}`}>{airdrop.type === 'Confirmed' ? 'High' : 'Medium'}</span>
