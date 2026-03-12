@@ -21,7 +21,7 @@ export function computeProfileScore(p: Partial<TalentProfile>): number {
     return Math.min(Math.round(score), 60);
 }
 
-export const BADGE_FREE_LIMIT = 30;
+export const BADGE_FREE_LIMIT = 50;
 export const JOB_FREE_LIMIT = 50;
 
 export async function checkBadgePromo(): Promise<{ isFree: boolean; remaining: number }> {
