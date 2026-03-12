@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PAYMENT_WALLET, BASE_USDC_CONTRACT } from '@/lib/payments';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 
 const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
@@ -31,6 +33,15 @@ export async function POST(req: NextRequest) {
     const rpcUrl = `https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`;
 
     try {
+        // Step 0: Check if this transaction hash has already been used
+        if (db) {
+            const q = query(collection(db, 'payments'), where('txHash', '==', txHash), limit(1));
+            const existing = await getDocs(q);
+            if (!existing.empty) {
+                return NextResponse.json({ valid: false, error: 'This transaction has already been used.' });
+            }
+        }
+
         const res = await fetch(rpcUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -59,7 +70,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Find a USDC Transfer log where `to` = our payment wallet
-        const transferLog = receipt.logs?.find((log: any) =>
+        const transferLog = receipt.logs?.find((log: { address: string; topics: string[]; data: string }) =>
             log.address?.toLowerCase() === BASE_USDC_CONTRACT.toLowerCase() &&
             log.topics?.[0]?.toLowerCase() === TRANSFER_TOPIC &&
             log.topics?.[2] &&
