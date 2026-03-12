@@ -28,7 +28,8 @@ import {
     Plus,
     X,
     ImagePlus,
-    List
+    List,
+    Loader2
 } from 'lucide-react';
 import { PAYMENT_LABELS, BASE_EXPLORER_TX } from '@/lib/payments';
 
@@ -49,6 +50,7 @@ export default function AdminDashboard() {
     const [showAirdropForm, setShowAirdropForm] = useState(false);
     const [airdropFormSubmitting, setAirdropFormSubmitting] = useState(false);
     const [uploadingAdminLogo, setUploadingAdminLogo] = useState(false);
+    const [uploadingTaskIdx, setUploadingTaskIdx] = useState<number | null>(null);
     const [editingAirdropId, setEditingAirdropId] = useState<string | null>(null);
     const [adminAirdropForm, setAdminAirdropForm] = useState({
         projectName: '', website: '', twitter: '', logoUrl: '',
@@ -513,20 +515,30 @@ export default function AdminDashboard() {
                                                     className="w-full sm:w-1/3 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-medium outline-none focus:border-accent-secondary/50 text-accent-secondary placeholder:text-foreground/30" />
                                                 <div className="w-full sm:w-1/3 flex items-center gap-2">
                                                     {task.imageUrl && <img src={task.imageUrl} alt="" className="w-8 h-8 rounded shrink-0 object-cover" />}
-                                                    <label className="flex-1 flex items-center justify-center gap-1.5 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl cursor-pointer hover:border-accent-secondary/30 text-xs font-bold text-foreground/50 transition-colors truncate">
-                                                        <ImagePlus className="w-3.5 h-3.5 shrink-0" />
-                                                        <span className="truncate">{task.imageUrl ? 'Change Image' : 'Attach Image'}</span>
+                                                    <label className={`flex-1 flex items-center justify-center gap-1.5 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl cursor-pointer hover:border-accent-secondary/30 text-xs font-bold text-foreground/50 transition-colors truncate ${uploadingTaskIdx === idx ? 'opacity-50 pointer-events-none' : ''}`}>
+                                                        {uploadingTaskIdx === idx ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5 shrink-0" />}
+                                                        <span className="truncate">{uploadingTaskIdx === idx ? 'Uploading...' : task.imageUrl ? 'Change Image' : 'Attach Image'}</span>
                                                         <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                                                             const file = e.target.files?.[0];
                                                             if (!file) return;
+                                                            setUploadingTaskIdx(idx);
                                                             try {
-                                                                const sRef = ref(storage, `tasks/${Date.now()}_${file.name}`);
-                                                                await uploadBytes(sRef, file);
-                                                                const url = await getDownloadURL(sRef);
+                                                                const data = new FormData();
+                                                                data.append('file', file);
+                                                                const res = await fetch('/api/upload', { method: 'POST', body: data });
+                                                                if (!res.ok) throw new Error('Upload failed');
+                                                                const { url } = await res.json();
+                                                                
                                                                 const t = [...adminAirdropForm.tasks];
                                                                 t[idx] = { ...t[idx], imageUrl: url };
                                                                 setAdminAirdropForm(p => ({ ...p, tasks: t }));
-                                                            } catch (err) { console.error('Error uploading task image', err); }
+                                                            } catch (err) { 
+                                                                console.error('Error uploading task image', err);
+                                                                alert('Failed to upload image.');
+                                                            } finally {
+                                                                setUploadingTaskIdx(null);
+                                                                e.target.value = '';
+                                                            }
                                                         }} />
                                                     </label>
                                                 </div>
