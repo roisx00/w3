@@ -300,16 +300,16 @@ function DashboardContent() {
                                     <Lock className="w-8 h-8 text-accent-warning" />
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
-                                    <h3 className="font-display font-black text-xl uppercase tracking-tight mb-1 text-accent-warning">Profile Not Public</h3>
+                                    <h3 className="font-display font-black text-xl uppercase tracking-tight mb-1 text-accent-warning">Get Your Verified Yellow Badge</h3>
                                     <p className="text-sm text-foreground/50 font-medium">
-                                        Your resume is currently hidden from recruiters. You must obtain an <span className="text-accent-primary font-bold">Access Badge</span> to make your profile public on the Talent Hub.
+                                        Your resume is currently at the bottom of the hub. Obtain the <span className="text-accent-warning font-bold">Verified Yellow Badge</span> to move your profile to the top and get noticed by recruiters.
                                     </p>
                                 </div>
                                 <button
                                     onClick={() => setShowBadgeModal(true)}
-                                    className="px-8 py-4 bg-accent-primary text-white font-black rounded-xl hover:scale-105 active:scale-95 transition-all text-xs uppercase tracking-widest shadow-lg shadow-accent-primary/20 shrink-0"
+                                    className="px-8 py-4 bg-accent-warning text-black font-black rounded-xl hover:scale-105 active:scale-95 transition-all text-xs uppercase tracking-widest shadow-lg shadow-accent-warning/20 shrink-0"
                                 >
-                                    Get Access Badge — ${PRICES.USER_BADGE} USDC
+                                    Get Verified Badge — ${PRICES.USER_BADGE} USDC
                                 </button>
                             </div>
                         </section>

@@ -117,12 +117,7 @@ function OnboardingContent() {
         if (currentStep < STEPS.length - 1) {
             setCurrentStep(currentStep + 1);
         } else {
-            // Check if user already has a badge. If not, require payment.
-            if (!user?.hasBadge && !user?.hasBadgePending) {
-                setShowBadgeModal(true);
-            } else {
-                publish();
-            }
+            publish();
         }
     };
 

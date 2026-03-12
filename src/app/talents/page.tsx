@@ -29,14 +29,22 @@ export default function TalentsPage() {
                     ...doc.data()
                 })) as TalentProfile[];
 
-                // Sort: score first, then cvBoosted
+                // Sort: hasBadge first, then score, then cvBoosted
                 fetchedTalents.sort((a, b) => {
+                    // 1. Badge priority
+                    const badgeA = a.hasBadge ? 1 : 0;
+                    const badgeB = b.hasBadge ? 1 : 0;
+                    if (badgeA !== badgeB) return badgeB - badgeA;
+
+                    // 2. Boost priority
+                    const boostA = a.cvBoosted ? 1 : 0;
+                    const boostB = b.cvBoosted ? 1 : 0;
+                    if (boostA !== boostB) return boostB - boostA;
+
+                    // 3. Score priority
                     const scoreA = a.reputationScore ?? a.profileScore ?? a.score ?? 0;
                     const scoreB = b.reputationScore ?? b.profileScore ?? b.score ?? 0;
-                    if (scoreA !== scoreB) {
-                        return scoreB - scoreA; // descending
-                    }
-                    return (b.cvBoosted ? 1 : 0) - (a.cvBoosted ? 1 : 0);
+                    return scoreB - scoreA;
                 });
                 setTalents(fetchedTalents);
             } catch (err) {
@@ -55,7 +63,6 @@ export default function TalentsPage() {
     }, [search]);
 
     const filtered = talents.filter(talent => {
-        if (!talent.hasBadge) return false;
         if (filterOpenToWork && !talent.openToWork) return false;
         return !search ||
             talent.displayName?.toLowerCase().includes(search.toLowerCase()) ||
