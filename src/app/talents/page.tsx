@@ -55,6 +55,7 @@ export default function TalentsPage() {
     }, [search]);
 
     const filtered = talents.filter(talent => {
+        if (!talent.hasBadge) return false;
         if (filterOpenToWork && !talent.openToWork) return false;
         return !search ||
             talent.displayName?.toLowerCase().includes(search.toLowerCase()) ||

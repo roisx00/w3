@@ -28,8 +28,6 @@ function DashboardContent() {
     const [showBadgeModal, setShowBadgeModal] = useState(false);
     const [showBoostModal, setShowBoostModal] = useState(false);
     const [paymentLoading, setPaymentLoading] = useState(false);
-    const [isBadgePromoFree, setIsBadgePromoFree] = useState(false);
-    const [badgesRemaining, setBadgesRemaining] = useState(0);
     const [applications, setApplications] = useState<any[]>([]);
     const [referralEarnings, setReferralEarnings] = useState<any[]>([]);
     const [referredUsers, setReferredUsers] = useState<any[]>([]);
@@ -81,14 +79,7 @@ function DashboardContent() {
         }).catch(() => { }); // index may not exist yet — silent fail
     }, [user?.id]);
 
-    useEffect(() => {
-        if (!user?.hasBadge && !user?.hasBadgePending) {
-            checkBadgePromo().then(({ isFree, remaining }) => {
-                setIsBadgePromoFree(isFree);
-                setBadgesRemaining(remaining);
-            });
-        }
-    }, [user?.id]);
+
 
     useEffect(() => {
         async function fetchSaved() {
@@ -249,15 +240,12 @@ function DashboardContent() {
                             </div>
                         ) : (
                             <button
-                                onClick={() => isBadgePromoFree ? handleFreeBadge() : setShowBadgeModal(true)}
+                                onClick={() => setShowBadgeModal(true)}
                                 disabled={paymentLoading}
                                 className="w-full flex items-center justify-between px-3 py-2.5 bg-accent-primary/10 border border-accent-primary/20 text-accent-primary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-accent-primary/20 transition-colors disabled:opacity-50"
                             >
                                 <span className="flex items-center gap-2"><Lock className="w-3 h-3" /> Get Badge</span>
-                                {isBadgePromoFree
-                                    ? <span className="text-accent-success">FREE ({badgesRemaining} left)</span>
-                                    : <span>${PRICES.USER_BADGE} USDC</span>
-                                }
+                                <span>${PRICES.USER_BADGE} USDC</span>
                             </button>
                         )}
 
@@ -304,6 +292,29 @@ function DashboardContent() {
 
                 {/* Main Content */}
                 <main className="lg:col-span-3 space-y-12">
+                    {/* Badge Requirement Banner */}
+                    {!user?.hasBadge && !user?.hasBadgePending && (
+                        <section className="glass p-6 border-accent-warning/30 bg-accent-warning/5 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <div className="flex flex-col md:flex-row items-center gap-6">
+                                <div className="w-16 h-16 rounded-2xl bg-accent-warning/10 border border-accent-warning/20 flex items-center justify-center shrink-0">
+                                    <Lock className="w-8 h-8 text-accent-warning" />
+                                </div>
+                                <div className="flex-1 text-center md:text-left">
+                                    <h3 className="font-display font-black text-xl uppercase tracking-tight mb-1 text-accent-warning">Profile Not Public</h3>
+                                    <p className="text-sm text-foreground/50 font-medium">
+                                        Your resume is currently hidden from recruiters. You must obtain an <span className="text-accent-primary font-bold">Access Badge</span> to make your profile public on the Talent Hub.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowBadgeModal(true)}
+                                    className="px-8 py-4 bg-accent-primary text-white font-black rounded-xl hover:scale-105 active:scale-95 transition-all text-xs uppercase tracking-widest shadow-lg shadow-accent-primary/20 shrink-0"
+                                >
+                                    Get Access Badge — ${PRICES.USER_BADGE} USDC
+                                </button>
+                            </div>
+                        </section>
+                    )}
+
                     {/* Quick Action Cards */}
                     <section>
                         <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30 mb-4">Quick Actions</p>
