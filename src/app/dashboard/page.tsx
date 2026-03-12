@@ -32,6 +32,7 @@ function DashboardContent() {
     const [badgesRemaining, setBadgesRemaining] = useState(0);
     const [applications, setApplications] = useState<any[]>([]);
     const [referralEarnings, setReferralEarnings] = useState<any[]>([]);
+    const [referredUsers, setReferredUsers] = useState<any[]>([]);
     const [copiedRef, setCopiedRef] = useState(false);
 
     const referralLink = user?.id
@@ -54,6 +55,17 @@ function DashboardContent() {
             orderBy('createdAt', 'desc')
         )).then(snap => {
             setReferralEarnings(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        }).catch(() => { });
+    }, [user?.id]);
+
+    // Fetch referred users
+    useEffect(() => {
+        if (!user?.id) return;
+        getDocs(query(
+            collection(db, 'talents'),
+            where('referredBy', '==', user.id)
+        )).then(snap => {
+            setReferredUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         }).catch(() => { });
     }, [user?.id]);
 
@@ -461,10 +473,10 @@ function DashboardContent() {
                                 </button>
                             </div>
 
-                            {/* Earnings */}
+                            {/* Earnings & Referrals */}
                             <div className="grid grid-cols-2 gap-4 mb-4">
                                 <div className="glass p-4 text-center">
-                                    <p className="text-2xl font-black text-accent-success">{referralEarnings.length}</p>
+                                    <p className="text-2xl font-black text-accent-success">{referredUsers.length}</p>
                                     <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest mt-1">Referrals</p>
                                 </div>
                                 <div className="glass p-4 text-center">
@@ -475,18 +487,38 @@ function DashboardContent() {
                                 </div>
                             </div>
 
-                            {referralEarnings.length > 0 && (
-                                <div className="space-y-2">
-                                    {referralEarnings.slice(0, 5).map((r: any) => (
-                                        <div key={r.id} className="flex items-center justify-between text-xs px-3 py-2 bg-white/5 rounded-lg">
-                                            <span className="text-foreground/60">{r.refereeName} · {r.paymentType.replace('_', ' ')}</span>
-                                            <span className="font-black text-accent-success">+${r.earning} USDC</span>
-                                        </div>
-                                    ))}
+                            {referredUsers.length > 0 && (
+                                <div className="mt-8 mb-6">
+                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-3">Your Referrals</h5>
+                                    <div className="space-y-2">
+                                        {referredUsers.map((u: any) => (
+                                            <div key={u.id} className="flex items-center justify-between text-xs px-3 py-2 bg-white/5 rounded-lg">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-5 h-5 rounded-full bg-accent-primary/20 flex items-center justify-center font-bold text-[8px] text-accent-primary tracking-tighter uppercase overflow-hidden shrink-0">
+                                                        {u.photoUrl ? <img src={u.photoUrl} alt="" className="w-full h-full object-cover" /> : (u.displayName || 'U').charAt(0)}
+                                                    </div>
+                                                    <span className="text-foreground/80 font-bold">{u.displayName || 'Anonymous'}</span>
+                                                </div>
+                                                <span className="text-[10px] text-foreground/40">@{u.username || 'user'}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 
-                            <p className="text-[10px] text-foreground/20 font-bold mt-4">Earnings are paid out manually in USDC. Contact admin to claim.</p>
+                            {referralEarnings.length > 0 && (
+                                <div className="mt-8">
+                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-3">Earnings History</h5>
+                                    <div className="space-y-2">
+                                        {referralEarnings.slice(0, 5).map((r: any) => (
+                                            <div key={r.id} className="flex items-center justify-between text-xs px-3 py-2 bg-white/5 rounded-lg">
+                                                <span className="text-foreground/60">{r.refereeName} · {r.paymentType.replace('_', ' ')}</span>
+                                                <span className="font-black text-accent-success">+${r.earning} USDC</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </section>
                     </div>
                 </main>
