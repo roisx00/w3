@@ -318,7 +318,7 @@ function DashboardContent() {
                     {/* Quick Action Cards */}
                     <section>
                         <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30 mb-4">Quick Actions</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <Link
                                 href="/onboarding"
                                 className="group glass p-6 hover:border-accent-primary/40 transition-all relative overflow-hidden"
@@ -337,6 +337,26 @@ function DashboardContent() {
                                     </div>
                                 </div>
                             </Link>
+
+                            <Link
+                                href="/airdrops"
+                                className="group glass p-6 hover:border-accent-success/40 transition-all relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-accent-success/5 rounded-full blur-[60px] -mr-16 -mt-16 group-hover:bg-accent-success/10 transition-colors" />
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-accent-success/10 border border-accent-success/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                                        <Gift className="w-6 h-6 text-accent-success" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-display font-black text-base uppercase tracking-tight mb-0.5 flex items-center gap-2">
+                                            Participate in Airdrops
+                                            <ArrowUpRight className="w-4 h-4 text-accent-success opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </h3>
+                                        <p className="text-xs text-foreground/40 font-medium">Explore and track new alpha</p>
+                                    </div>
+                                </div>
+                            </Link>
+
                             <Link
                                 href="/jobs/new"
                                 className="group glass p-6 hover:border-accent-secondary/40 transition-all relative overflow-hidden"
