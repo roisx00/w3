@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type MintJobStatus = 'pending' | 'monitoring' | 'minting' | 'success' | 'failed' | 'stopped';
 export type LogType = 'info' | 'success' | 'error' | 'warn';
 

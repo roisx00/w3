@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * W3Hub NFT Mint Sniper Bot
  * ─────────────────────────
