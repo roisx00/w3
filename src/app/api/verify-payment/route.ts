@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PAYMENT_WALLET, BASE_USDC_CONTRACT } from '@/lib/payments';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
 
 const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
@@ -34,12 +33,13 @@ export async function POST(req: NextRequest) {
 
     try {
         // Step 0: Check if this transaction hash has already been used
-        if (db) {
-            const q = query(collection(db, 'payments'), where('txHash', '==', txHash), limit(1));
-            const existing = await getDocs(q);
-            if (!existing.empty) {
-                return NextResponse.json({ valid: false, error: 'This transaction has already been used.' });
-            }
+        const existing = await adminDb.collection('payments')
+            .where('txHash', '==', txHash)
+            .limit(1)
+            .get();
+        
+        if (!existing.empty) {
+            return NextResponse.json({ valid: false, error: 'This transaction has already been used.' });
         }
 
         const res = await fetch(rpcUrl, {
