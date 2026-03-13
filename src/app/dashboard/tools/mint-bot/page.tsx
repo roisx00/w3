@@ -129,7 +129,10 @@ export default function MintBotPage() {
             if (!res.ok) { alert(data.error || 'Failed to add wallet.'); return; }
             setWallets(prev => [{ id: data.id, name: data.name, address: data.address }, ...prev]);
             setWalletName(''); setPrivateKey(''); setShowAddWallet(false);
-        } catch { alert('Network error.'); } finally { setAddingWallet(false); }
+        } catch (err: any) { 
+            console.error('Add wallet error:', err);
+            alert(`Error: ${err.message || 'Network error'}`); 
+        } finally { setAddingWallet(false); }
     };
 
     const handleDeleteWallet = async (id: string) => {
