@@ -80,9 +80,15 @@ export default function MintBotPage() {
         setLoadingWallets(true);
         try {
             const res = await fetch(`/api/mint-bot/wallets?userId=${user.id}`);
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('Fetch wallets error:', text);
+                return;
+            }
             const data = await res.json();
             setWallets(data.wallets || []);
-        } catch { /* silent */ } finally { setLoadingWallets(false); }
+        } catch (err) { console.error('Fetch wallets network error:', err); } 
+        finally { setLoadingWallets(false); }
     }, [user?.id]);
 
     const fetchJobs = useCallback(async () => {
@@ -90,9 +96,15 @@ export default function MintBotPage() {
         setLoadingJobs(true);
         try {
             const res = await fetch(`/api/mint-bot/jobs?userId=${user.id}`);
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('Fetch jobs error:', text);
+                return;
+            }
             const data = await res.json();
             setJobs(data.jobs || []);
-        } catch { /* silent */ } finally { setLoadingJobs(false); }
+        } catch (err) { console.error('Fetch jobs network error:', err); } 
+        finally { setLoadingJobs(false); }
     }, [user?.id]);
 
     useEffect(() => {
@@ -111,8 +123,10 @@ export default function MintBotPage() {
         setLoadingLogs(true);
         try {
             const res = await fetch(`/api/mint-bot/logs?jobId=${jobId}`);
-            const data = await res.json();
-            setLogs(data.logs || []);
+            if (res.ok) {
+                const data = await res.json();
+                setLogs(data.logs || []);
+            }
         } catch { /* silent */ } finally { setLoadingLogs(false); }
     };
 
@@ -125,7 +139,17 @@ export default function MintBotPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user!.id, name: walletName.trim(), privateKey: privateKey.trim() }),
             });
-            const data = await res.json();
+            
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                alert(`Server Error: ${res.status}. Could not parse response.`);
+                console.error('Non-JSON response:', text);
+                return;
+            }
+
             if (!res.ok) { alert(data.error || 'Failed to add wallet.'); return; }
             setWallets(prev => [{ id: data.id, name: data.name, address: data.address }, ...prev]);
             setWalletName(''); setPrivateKey(''); setShowAddWallet(false);
