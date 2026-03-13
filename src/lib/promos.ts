@@ -2,23 +2,24 @@ import { db } from './firebase';
 import { collection, query, where, getCountFromServer } from 'firebase/firestore';
 import type { TalentProfile } from './types';
 
-// Compute a base resume score (0–60) from profile completeness & quality
+// Compute a base resume score (0–80) from profile completeness & quality
+// Reviews can push the final reputationScore ±20 from this base
 export function computeProfileScore(p: Partial<TalentProfile>): number {
     let score = 0;
-    if (p.displayName?.trim()) score += 5;
-    if (p.bio && p.bio.length > 60) score += 8;
-    if (p.bio && p.bio.length > 160) score += 4;   // extra for detailed bio
-    if (p.walletAddress?.trim()) score += 5;
-    if (p.socials?.twitter?.trim()) score += 4;
-    if (p.photoUrl?.trim()) score += 8;             // has profile photo
+    if (p.displayName?.trim()) score += 6;
+    if (p.bio && p.bio.length > 60) score += 10;
+    if (p.bio && p.bio.length > 160) score += 5;   // extra for detailed bio
+    if (p.walletAddress?.trim()) score += 6;
+    if (p.socials?.twitter?.trim()) score += 5;
+    if (p.photoUrl?.trim()) score += 10;            // has profile photo
     const roles = p.roles?.length ?? 0;
-    score += Math.min(roles * 3, 9);                // up to 3 roles × 3pts
+    score += Math.min(roles * 4, 12);               // up to 3 roles × 4pts
     const skills = p.skills?.length ?? 0;
-    score += skills >= 8 ? 8 : skills >= 4 ? 4 : 0;
+    score += skills >= 8 ? 10 : skills >= 4 ? 5 : 0;
     const exp = p.experience?.length ?? 0;
-    score += Math.min(exp * 5, 15);                 // up to 3 exp × 5pts
-    // max possible: 5+8+4+5+4+8+9+8+15 = 66 → cap at 60
-    return Math.min(Math.round(score), 60);
+    score += Math.min(exp * 6, 18);                 // up to 3 exp × 6pts
+    // max possible: 6+10+5+6+5+10+12+10+18 = 82 → cap at 80
+    return Math.min(Math.round(score), 80);
 }
 
 export const BADGE_FREE_LIMIT = 0;

@@ -114,9 +114,9 @@ function DashboardContent() {
         fetchTracked();
     }, [trackedAirdrops]);
 
-    // Compute profile completion %
+    // Profile score starts at 80 for new members; completing all 6 fields reaches 100
     const profileFields = [user?.displayName, user?.bio, user?.walletAddress, user?.roles?.length, user?.skills?.length, user?.resumeUrl];
-    const profilePct = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100);
+    const profilePct = Math.min(100, 80 + Math.round((profileFields.filter(Boolean).length / profileFields.length) * 20));
 
     const handleFreeBadge = async () => {
         if (!user?.id) return;

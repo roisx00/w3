@@ -192,6 +192,47 @@ export default function AdminDashboard() {
         }
     };
 
+    const [manualBadgeInput, setManualBadgeInput] = useState('');
+    const [manualBadgeTx, setManualBadgeTx] = useState('');
+    const [manualBadgeLoading, setManualBadgeLoading] = useState(false);
+
+    const handleManualBadgeGrant = async () => {
+        const input = manualBadgeInput.trim();
+        if (!input) { alert('Enter a user ID or email.'); return; }
+        setManualBadgeLoading(true);
+        try {
+            // Find user by ID directly, or by matching email in talents list
+            let targetId = input;
+            if (!input.startsWith('0x') && input.includes('@')) {
+                const match = talents.find(t => t.email?.toLowerCase() === input.toLowerCase());
+                if (!match) { alert('No user found with that email. Try their UID instead.'); setManualBadgeLoading(false); return; }
+                targetId = match.id;
+            }
+            await updateDoc(doc(db, 'talents', targetId), { hasBadge: true, hasBadgePending: false });
+            if (manualBadgeTx.trim()) {
+                await addDoc(collection(db, 'payments'), {
+                    userId: targetId,
+                    userEmail: talents.find(t => t.id === targetId)?.email || '',
+                    userDisplayName: talents.find(t => t.id === targetId)?.displayName || '',
+                    type: 'user_badge',
+                    amount: 2,
+                    txHash: manualBadgeTx.trim(),
+                    status: 'verified',
+                    note: 'Manually granted by admin',
+                    createdAt: serverTimestamp(),
+                });
+            }
+            alert(`Badge granted to ${targetId}`);
+            setManualBadgeInput('');
+            setManualBadgeTx('');
+            fetchData();
+        } catch (err: any) {
+            alert('Failed: ' + (err.message || 'Unknown error'));
+        } finally {
+            setManualBadgeLoading(false);
+        }
+    };
+
     const filteredJobs = jobs.filter(j =>
         !search ||
         j.roleNeeded?.toLowerCase().includes(search.toLowerCase()) ||
@@ -785,7 +826,45 @@ export default function AdminDashboard() {
                             </tr>
                         ))}
 
-                        {/* USERS TAB */}
+                        {/* USERS TAB — Manual Badge Grant */}
+                        {activeTab === 'users' && (
+                            <tr>
+                                <td colSpan={4} className="px-6 pt-6 pb-2">
+                                    <div className="bg-accent-warning/5 border border-accent-warning/20 rounded-2xl p-5 space-y-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-accent-warning flex items-center gap-2">
+                                            <ShieldCheck className="w-3.5 h-3.5" /> Manual Badge Grant — for payments received without auto-verification
+                                        </p>
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <input
+                                                type="text"
+                                                value={manualBadgeInput}
+                                                onChange={e => setManualBadgeInput(e.target.value)}
+                                                placeholder="User UID or email address"
+                                                className="flex-1 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-mono outline-none focus:border-accent-warning/50"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={manualBadgeTx}
+                                                onChange={e => setManualBadgeTx(e.target.value)}
+                                                placeholder="Tx hash (optional)"
+                                                className="flex-1 glass bg-white/5 border-white/10 px-3 py-2 rounded-xl text-xs font-mono outline-none focus:border-accent-warning/50"
+                                            />
+                                            <button
+                                                onClick={handleManualBadgeGrant}
+                                                disabled={manualBadgeLoading || !manualBadgeInput.trim()}
+                                                className="px-5 py-2 bg-accent-warning text-background font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
+                                            >
+                                                {manualBadgeLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                                Grant Badge
+                                            </button>
+                                        </div>
+                                        <p className="text-[9px] text-foreground/30 font-medium">
+                                            Enter the user&apos;s Firebase UID (find in Users tab below or in Firebase Console). Tx hash is saved to payments collection for records.
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        )}
                         {activeTab === 'users' && filteredTalents.map(talent => (
                             <tr key={talent.id} className="hover:bg-white/5 transition-colors group">
                                 <td className="px-6 py-6">

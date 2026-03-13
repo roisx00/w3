@@ -12,7 +12,7 @@ import { Star, MessageSquarePlus, Trash2, Loader2, ShieldAlert } from 'lucide-re
 interface ReviewSectionProps {
     talentId: string;
     talentName: string;
-    profileScore?: number;  // base score from profile completeness (0–60)
+    profileScore?: number;  // base score from profile completeness (0–80)
 }
 
 function Stars({ rating, interactive = false, onSelect }: {
@@ -46,10 +46,10 @@ function Stars({ rating, interactive = false, onSelect }: {
 }
 
 function scoreLabel(score: number) {
-    if (score >= 85) return { label: 'Excellent', color: 'text-accent-success' };
-    if (score >= 70) return { label: 'Good', color: 'text-accent-primary' };
-    if (score >= 50) return { label: 'Average', color: 'text-accent-warning' };
-    return { label: 'Poor', color: 'text-accent-danger' };
+    if (score >= 90) return { label: 'Excellent', color: 'text-accent-success' };
+    if (score >= 80) return { label: 'Good', color: 'text-accent-primary' };
+    if (score >= 70) return { label: 'Average', color: 'text-accent-warning' };
+    return { label: 'Needs Work', color: 'text-accent-danger' };
 }
 
 export default function ReviewSection({ talentId, talentName, profileScore = 0 }: ReviewSectionProps) {
@@ -66,12 +66,16 @@ export default function ReviewSection({ talentId, talentName, profileScore = 0 }
     const hasReviewed = reviews.some(r => r.reviewerId === user?.id);
     const canReview = isLoggedIn && !isOwnProfile && !hasReviewed && user?.hasBadge;
 
-    // Blend: profileScore (base, 0–60) + review adjustment (0–40)
-    const reviewAvgScore = reviews.length > 0
-        ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length / 5) * 40)
+    // Final score: profileScore (base 0–80) ± review adjustment (±20)
+    // 5★ avg → +20, 3★ avg → 0 (neutral), 1★ avg → -20
+    const avgRating = reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
         : null;
-    const score = profileScore > 0 || reviewAvgScore !== null
-        ? Math.min(100, profileScore + (reviewAvgScore ?? 0))
+    const reviewAdjustment = avgRating !== null
+        ? Math.round(((avgRating - 3) / 2) * 20)
+        : null;
+    const score = profileScore > 0 || reviewAdjustment !== null
+        ? Math.min(100, Math.max(0, profileScore + (reviewAdjustment ?? 0)))
         : null;
 
     useEffect(() => {
@@ -113,9 +117,10 @@ export default function ReviewSection({ talentId, talentName, profileScore = 0 }
             const updated = [newReview, ...reviews];
             setReviews(updated);
 
-            // Update score on talent doc: profileScore (base) + review portion
-            const reviewPart = Math.round((updated.reduce((s, r) => s + r.rating, 0) / updated.length / 5) * 40);
-            const newScore = Math.min(100, profileScore + reviewPart);
+            // Update score: profileScore (base 0–80) ± review adjustment (±20)
+            const avgR = updated.reduce((s, r) => s + r.rating, 0) / updated.length;
+            const reviewPart = Math.round(((avgR - 3) / 2) * 20);
+            const newScore = Math.min(100, Math.max(0, profileScore + reviewPart));
             await updateDoc(doc(db, 'talents', talentId), {
                 reputationScore: newScore,
                 reviewCount: updated.length,
@@ -138,7 +143,7 @@ export default function ReviewSection({ talentId, talentName, profileScore = 0 }
             const updated = reviews.filter(r => r.id !== reviewId);
             setReviews(updated);
             const newScore = updated.length > 0
-                ? Math.min(100, profileScore + Math.round((updated.reduce((s, r) => s + r.rating, 0) / updated.length / 5) * 40))
+                ? (() => { const avg = updated.reduce((s, r) => s + r.rating, 0) / updated.length; return Math.min(100, Math.max(0, profileScore + Math.round(((avg - 3) / 2) * 20))); })()
                 : profileScore || null;
             await updateDoc(doc(db, 'talents', talentId), {
                 reputationScore: newScore ?? 0,
