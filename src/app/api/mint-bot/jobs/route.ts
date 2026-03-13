@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     if (!adminDb) return NextResponse.json({ error: 'Server not configured.' }, { status: 503 });
 
     // Verify user has Golden Badge
-    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const userDoc = await adminDb.collection('talents').doc(userId).get();
     if (!userDoc.exists || !userDoc.data()?.hasBadge) {
         return NextResponse.json({ error: 'Golden Badge required to use Mint Bot.' }, { status: 403 });
     }
