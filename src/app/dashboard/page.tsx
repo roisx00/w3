@@ -12,6 +12,7 @@ import { PRICES } from '@/lib/payments';
 import Link from 'next/link';
 
 import AuthGuard from '@/components/auth/AuthGuard';
+import GoldBadge from '@/components/GoldBadge';
 
 export default function DashboardPage() {
     return (
@@ -192,7 +193,10 @@ function DashboardContent() {
                                 (user?.displayName || 'U').charAt(0).toUpperCase()
                             )}
                         </div>
-                        <h3 className="font-display font-black text-xl mb-1">{user?.displayName || 'Anonymous'}</h3>
+                        <h3 className="font-display font-black text-xl mb-1 flex items-center justify-center gap-1.5">
+                            {user?.displayName || 'Anonymous'}
+                            {user?.hasBadge && <GoldBadge size={22} className="drop-shadow-[0_0_8px_rgba(234,179,8,0.4)]" />}
+                        </h3>
                         <span className="text-xs text-foreground/40 font-bold tracking-widest uppercase">{user?.roles?.length ? user.roles[0] : 'Web3 Professional'}</span>
 
                         <div className="mt-8 space-y-2">
