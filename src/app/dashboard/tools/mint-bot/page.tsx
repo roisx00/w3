@@ -253,13 +253,23 @@ export default function MintBotPage() {
             </div>
 
             {/* Warning Banner */}
-            <div className="flex items-start gap-3 px-5 py-4 bg-accent-warning/5 border border-accent-warning/20 rounded-2xl">
-                <AlertTriangle className="w-4 h-4 text-accent-warning shrink-0 mt-0.5" />
-                <p className="text-xs text-foreground/60 leading-relaxed">
-                    <strong className="text-foreground/80">Security:</strong> Private keys are encrypted with AES-256-GCM server-side and never exposed to the browser.
-                    Bot execution runs as a separate backend service — see <code className="text-accent-primary">bot/</code> directory for setup.
-                </p>
+            <div className="flex flex-col md:flex-row gap-3">
+                <div className="flex-1 flex items-start gap-3 px-5 py-4 bg-accent-warning/5 border border-accent-warning/20 rounded-2xl">
+                    <AlertTriangle className="w-4 h-4 text-accent-warning shrink-0 mt-0.5" />
+                    <p className="text-xs text-foreground/60 leading-relaxed">
+                        <strong className="text-foreground/80">Security:</strong> Private keys are encrypted with AES-256-GCM server-side and never exposed to the browser.
+                        Bot execution runs as a separate backend service — see <code className="text-accent-primary">bot/</code> directory for setup.
+                    </p>
+                </div>
+                <div className="flex items-center gap-3 px-5 py-4 bg-accent-primary/5 border border-accent-primary/20 rounded-2xl">
+                    <ShieldCheck className="w-4 h-4 text-accent-primary shrink-0" />
+                    <div className="space-y-0.5">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-accent-primary">Full Access Granted</p>
+                        <p className="text-[10px] text-foreground/40 font-medium">All Golden Badge holders have full access regardless of Resume Score.</p>
+                    </div>
+                </div>
             </div>
+
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left: Wallets */}

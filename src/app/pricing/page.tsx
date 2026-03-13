@@ -23,7 +23,9 @@ const plans = [
             'Upload your resume / CV',
             'Track airdrop task progress',
             'Soulbound badge on Base chain',
+            'Full access to NFT Mint Sniper Bot',
             'Priority visibility in talent search',
+
         ],
         cta: 'Get Badge',
         href: '/onboarding',
