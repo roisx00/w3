@@ -60,7 +60,7 @@ export default function MintBotPage() {
         walletId: '',
         contractAddress: '',
         chainId: 8453,
-        rpcUrl: CHAINS[8453].rpc,
+        rpcUrl: '',
         mintFunction: 'mint',
         mintAmount: 1,
         mintPrice: '0',
@@ -142,6 +142,7 @@ export default function MintBotPage() {
         if (!jobForm.walletId || !jobForm.contractAddress.trim()) {
             alert('Select a wallet and enter the contract address.'); return;
         }
+        // rpcUrl is optional — server resolves default if empty
         setStartingJob(true);
         try {
             const selectedWallet = wallets.find(w => w.id === jobForm.walletId);
@@ -542,7 +543,7 @@ export default function MintBotPage() {
                                     value={jobForm.chainId}
                                     onChange={e => {
                                         const id = Number(e.target.value);
-                                        setJobForm(f => ({ ...f, chainId: id, rpcUrl: CHAINS[id]?.rpc || '' }));
+                                        setJobForm(f => ({ ...f, chainId: id, rpcUrl: '' }));
                                     }}
                                     className="w-full glass bg-white/5 border-white/10 px-3 py-3 rounded-xl text-xs font-bold outline-none focus:border-accent-primary/50"
                                 >
@@ -567,14 +568,15 @@ export default function MintBotPage() {
 
                         {/* Custom RPC */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-foreground/40">RPC URL (Alchemy/QuickNode recommended)</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-foreground/40">RPC URL <span className="text-foreground/20 normal-case font-medium">(optional)</span></label>
                             <input
                                 type="text"
                                 value={jobForm.rpcUrl}
                                 onChange={e => setJobForm(f => ({ ...f, rpcUrl: e.target.value }))}
-                                placeholder="https://..."
+                                placeholder="Leave empty to use W3Hub default RPC"
                                 className="w-full glass bg-white/5 border-white/10 px-4 py-3 rounded-xl text-xs font-mono outline-none focus:border-accent-primary/50"
                             />
+                            <p className="text-[9px] text-foreground/20 leading-relaxed">Leave empty to use the W3Hub default RPC. For faster mint detection, provide your own from <span className="text-accent-primary">Alchemy</span> or <span className="text-accent-primary">QuickNode</span>.</p>
                         </div>
 
                         {/* Amount + Price */}
