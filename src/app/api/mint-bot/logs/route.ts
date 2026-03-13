@@ -12,10 +12,13 @@ export async function GET(req: NextRequest) {
     const snap = await adminDb
         .collection('mint_bot_logs')
         .where('jobId', '==', jobId)
-        .orderBy('timestamp', 'desc')
+        // .orderBy('timestamp', 'desc')
         .limit(50)
         .get();
 
-    const logs = snap.docs.map((d: QueryDocumentSnapshot) => ({ id: d.id, ...d.data() }));
+    const logs = snap.docs
+        .map((d: QueryDocumentSnapshot) => ({ id: d.id, ...d.data() }))
+        .sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)); // Manual sort
+
     return NextResponse.json({ logs });
 }

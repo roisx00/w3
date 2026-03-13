@@ -54,8 +54,18 @@ export async function executeMint(
     job: MintBotJob,
     signer: ethers.Wallet,
 ): Promise<string> {
-    const contract = new ethers.Contract(job.contractAddress, MINT_ABI, signer);
+    // Dynamically build ABI to ensure the user's specified function is available
+    const dynamicAbi = [...MINT_ABI];
+    const isStandard = MINT_ABI.some(s => s.includes(`function ${job.mintFunction}(`));
+    
+    if (!isStandard) {
+        dynamicAbi.push(`function ${job.mintFunction}(uint256 quantity) payable`);
+        dynamicAbi.push(`function ${job.mintFunction}() payable`);
+    }
+
+    const contract = new ethers.Contract(job.contractAddress, dynamicAbi, signer);
     const value = ethers.parseEther(job.mintPrice || '0');
+
     const gasOpts = await buildGasOptions(signer.provider as ethers.JsonRpcProvider, job.gasMultiplier);
 
     let attempt = 0;

@@ -5,6 +5,14 @@ import { writeLog, updateJob } from './firestoreClient';
 import { executeMint } from './executor';
 import { getEthersSigner } from './walletManager';
 
+// Default RPC fallbacks (same as Next.js API) — used if job.rpcUrl is empty
+const DEFAULT_RPCS: Record<number, string> = {
+    1:     process.env.DEFAULT_ETH_RPC      || 'https://eth.llamarpc.com',
+    8453:  process.env.DEFAULT_BASE_RPC     || 'https://mainnet.base.org',
+    137:   process.env.DEFAULT_POLYGON_RPC  || 'https://polygon.llamarpc.com',
+    42161: process.env.DEFAULT_ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc',
+};
+
 // State variable names commonly used to signal a public sale is live
 const ACTIVE_STATE_SELECTORS = [
     'mintActive',
@@ -101,7 +109,17 @@ export function startMonitoring(
         await writeLog(job.id, job.userId, `Started monitoring ${job.contractAddress} on chain ${job.chainId}`, 'info');
 
         const provider = new ethers.JsonRpcProvider(job.rpcUrl);
-        const contract = new ethers.Contract(job.contractAddress, STATE_ABI, provider);
+        
+        // Dynamically build ABI for state checks
+        const dynamicAbi = [...STATE_ABI];
+        const isStandard = STATE_ABI.some(s => s.includes(`function ${job.mintFunction}(`));
+        if (!isStandard) {
+            dynamicAbi.push(`function ${job.mintFunction}(uint256 quantity) payable`);
+            dynamicAbi.push(`function ${job.mintFunction}() payable`);
+        }
+
+        const contract = new ethers.Contract(job.contractAddress, dynamicAbi, provider);
+
 
         const checkBlock = async (blockNumber: number) => {
             if (stopped || executing) return;

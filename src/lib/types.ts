@@ -44,7 +44,7 @@ export interface TalentProfile {
     cvBoostExpiry?: string;
     openToWork?: boolean;
     score?: number;             // Legacy score logic, moving to profileScore/reputationScore
-    profileScore?: number;      // 0–60, computed from profile completeness
+    profileScore?: number;      // 0–80, computed from profile completeness
     reputationScore?: number;   // 0–100, blend of profileScore + reviews
     reviewCount?: number;
     referredBy?: string;        // userId of referrer

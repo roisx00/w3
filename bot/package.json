@@ -4,7 +4,7 @@
   "description": "NFT Mint Sniper Bot — background worker for W3Hub",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node --esm src/index.ts",
+    "dev": "ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
