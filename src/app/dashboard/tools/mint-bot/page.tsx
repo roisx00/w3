@@ -6,14 +6,14 @@ import { useRouter } from 'next/navigation';
 import {
     Bot, Plus, Trash2, Play, Square, ExternalLink, RefreshCw,
     Wallet, ChevronRight, CheckCircle2, XCircle, Loader2,
-    AlertTriangle, Eye, EyeOff, Zap, Activity, Clock, Hash
+    AlertTriangle, Eye, EyeOff, Zap, Activity, Hash, Lock, ShieldCheck
 } from 'lucide-react';
 import Link from 'next/link';
 
 interface BotWallet { id: string; name: string; address: string; }
 interface BotJob {
     id: string; walletAddress: string; contractAddress: string;
-    mintFunction: string; mintAmount: number; mintPrice: string;
+    chainId: number; mintFunction: string; mintAmount: number; mintPrice: string;
     gasMultiplier: number; status: string; txHash?: string;
     error?: string; createdAt: any;
 }
@@ -175,6 +175,47 @@ export default function MintBotPage() {
         return (
             <div className="flex items-center justify-center py-32">
                 <Loader2 className="w-6 h-6 animate-spin text-accent-primary" />
+            </div>
+        );
+    }
+
+    // Golden Badge gate
+    if (!user?.hasBadge) {
+        return (
+            <div className="max-w-6xl mx-auto px-6 py-12 space-y-8">
+                <div className="flex items-center gap-2 text-xs text-foreground/30 font-bold uppercase tracking-widest">
+                    <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+                    <ChevronRight className="w-3 h-3" />
+                    <span className="text-foreground/60">Tools</span>
+                    <ChevronRight className="w-3 h-3" />
+                    <span className="text-foreground">Mint Bot</span>
+                </div>
+                <div className="flex flex-col items-center justify-center py-24 gap-6 text-center">
+                    <div className="w-20 h-20 rounded-3xl bg-accent-warning/10 border border-accent-warning/20 flex items-center justify-center">
+                        <Lock className="w-9 h-9 text-accent-warning" />
+                    </div>
+                    <div className="space-y-2 max-w-md">
+                        <h1 className="font-display font-black text-2xl uppercase tracking-tight">Premium Tool</h1>
+                        <p className="text-foreground/50 text-sm leading-relaxed">
+                            The NFT Mint Sniper Bot is available exclusively for <strong className="text-accent-warning">Golden Badge</strong> holders.
+                            Get your badge to unlock multi-wallet contract monitoring and auto-minting.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/dashboard"
+                            className="flex items-center gap-2 px-6 py-3 bg-accent-warning text-black font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_8px_24px_rgba(251,191,36,0.3)]"
+                        >
+                            <ShieldCheck className="w-4 h-4" /> Get Golden Badge — $2
+                        </Link>
+                        <Link
+                            href="/pricing"
+                            className="px-6 py-3 glass border border-white/10 text-foreground/50 font-black text-xs uppercase tracking-widest rounded-xl hover:text-foreground transition-colors"
+                        >
+                            View Pricing
+                        </Link>
+                    </div>
+                </div>
             </div>
         );
     }

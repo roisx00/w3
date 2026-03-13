@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { MintBotJob } from '@/lib/mintBot/types';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 // GET  /api/mint-bot/jobs?userId=xxx  — list jobs for user
 export async function GET(req: NextRequest) {
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
         .limit(20)
         .get();
 
-    const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const jobs = snap.docs.map((d: QueryDocumentSnapshot) => ({ id: d.id, ...d.data() }));
     return NextResponse.json({ jobs });
 }
 
@@ -45,6 +46,18 @@ export async function POST(req: NextRequest) {
     }
 
     if (!adminDb) return NextResponse.json({ error: 'Server not configured.' }, { status: 503 });
+
+    // Verify user has Golden Badge
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    if (!userDoc.exists || !userDoc.data()?.hasBadge) {
+        return NextResponse.json({ error: 'Golden Badge required to use Mint Bot.' }, { status: 403 });
+    }
+
+    // Verify the wallet belongs to this user
+    const walletDoc = await adminDb.collection('mint_bot_wallets').doc(walletId).get();
+    if (!walletDoc.exists || walletDoc.data()?.userId !== userId) {
+        return NextResponse.json({ error: 'Wallet not found.' }, { status: 404 });
+    }
 
     const now = new Date();
     const jobData: Omit<MintBotJob, 'id'> = {

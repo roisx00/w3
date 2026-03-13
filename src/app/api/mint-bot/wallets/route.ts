@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { encryptPrivateKey } from '@/lib/mintBot/encryption';
 import { MintBotWallet } from '@/lib/mintBot/types';
 import { ethers } from 'ethers';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 // GET  /api/mint-bot/wallets?userId=xxx  — list wallets (addresses only, no keys)
 export async function GET(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
         .orderBy('createdAt', 'desc')
         .get();
 
-    const wallets = snap.docs.map(d => {
+    const wallets = snap.docs.map((d: QueryDocumentSnapshot) => {
         const data = d.data() as MintBotWallet;
         // Never return the encrypted key to the frontend
         return { id: d.id, name: data.name, address: data.address, createdAt: data.createdAt };
@@ -34,14 +35,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'userId, name, and privateKey are required.' }, { status: 400 });
     }
 
+    if (!adminDb) return NextResponse.json({ error: 'Server not configured.' }, { status: 503 });
+
+    // Verify user has Golden Badge
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    if (!userDoc.exists || !userDoc.data()?.hasBadge) {
+        return NextResponse.json({ error: 'Golden Badge required to use Mint Bot.' }, { status: 403 });
+    }
+
     // Validate private key is a valid Ethereum key
     try {
         new ethers.Wallet(privateKey);
     } catch {
         return NextResponse.json({ error: 'Invalid private key.' }, { status: 400 });
     }
-
-    if (!adminDb) return NextResponse.json({ error: 'Server not configured.' }, { status: 503 });
 
     const wallet = new ethers.Wallet(privateKey);
     const { encrypted, iv, tag } = encryptPrivateKey(privateKey);
