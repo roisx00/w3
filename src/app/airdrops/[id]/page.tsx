@@ -92,11 +92,7 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
         if (!user?.id) return;
         setBadgeLoading(true);
         try {
-            await setDoc(doc(db, 'talents', user.id), {
-                hasBadgePending: true,
-                badgeTxHash: txHash,
-            }, { merge: true });
-
+            // Payment already verified on-chain by PaymentModal — activate immediately
             await addDoc(collection(db, 'payments'), {
                 userId: user.id,
                 userEmail: user.email || '',
@@ -104,15 +100,23 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                 type: 'user_badge',
                 amount: PRICES.USER_BADGE,
                 txHash,
-                status: 'pending',
+                status: 'verified',
                 createdAt: serverTimestamp(),
             });
-
-            updateProfile({ hasBadgePending: true, badgeTxHash: txHash } as any);
+            
+            const badgeData = { hasBadge: true, hasBadgePending: false, badgeTxHash: txHash };
+            // Update talent doc - AppContext updateProfile handles this but dashboard does both for redundancy/speed
+            const { updateDoc } = await import('firebase/firestore');
+            await updateDoc(doc(db, 'talents', user.id), badgeData);
+            
+            const { logReferralEarning } = useAppContext();
+            updateProfile(badgeData as any);
+            await logReferralEarning('user_badge', PRICES.USER_BADGE, txHash, user as any);
+            
             setShowBadgeModal(false);
         } catch (err) {
             console.error('Badge payment error:', err);
-            alert('Failed to submit. Please try again.');
+            alert('Failed to activate badge. Please try again.');
         } finally {
             setBadgeLoading(false);
         }

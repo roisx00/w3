@@ -86,10 +86,10 @@ export async function POST(req: NextRequest) {
 
         const amount = hexToUSDC(transferLog.data);
 
-        if (Math.abs(amount - expectedAmount) > 0.01) {
+        if (amount < expectedAmount - 0.01) {
             return NextResponse.json({
                 valid: false,
-                error: `Wrong amount. Expected $${expectedAmount} USDC but found $${amount.toFixed(2)} USDC.`,
+                error: `Insufficient amount. Expected $${expectedAmount} USDC but found $${amount.toFixed(2)} USDC.`,
             });
         }
 
