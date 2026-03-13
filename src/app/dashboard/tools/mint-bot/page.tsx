@@ -353,7 +353,7 @@ export default function MintBotPage() {
                                         </div>
                                     </div>
                                     <button onClick={() => handleDeleteWallet(w.id)}
-                                        className="p-1.5 text-foreground/20 hover:text-accent-danger transition-colors opacity-0 group-hover:opacity-100 shrink-0">
+                                        className="p-1.5 text-foreground/20 hover:text-accent-danger transition-colors shrink-0">
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                 </div>

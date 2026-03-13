@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
     const snap = await adminDb
         .collection('mint_bot_wallets')
         .where('userId', '==', userId)
-        .orderBy('createdAt', 'desc')
         .get();
 
     const wallets = snap.docs.map((d: QueryDocumentSnapshot) => {
