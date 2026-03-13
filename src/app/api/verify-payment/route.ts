@@ -94,7 +94,11 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({ valid: true, amount });
-    } catch {
-        return NextResponse.json({ valid: false, error: 'Failed to reach BaseScan. Please try again.' }, { status: 500 });
+    } catch (e: any) {
+        console.error('Payment verification error:', e);
+        return NextResponse.json({ 
+            valid: false, 
+            error: `Verification failed: ${e.message || 'Unknown error'}. Please try again.` 
+        }, { status: 500 });
     }
 }
