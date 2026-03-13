@@ -43,10 +43,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Golden Badge required to use Mint Bot.' }, { status: 403 });
     }
 
-    // Enforce wallet limit
-    const existingSnap = await adminDb.collection('mint_bot_wallets').where('userId', '==', userId).get();
+    // Enforce strict wallet limit (max 3)
+    const existingSnap = await adminDb.collection('mint_bot_wallets')
+        .where('userId', '==', userId)
+        .get();
+        
     if (existingSnap.size >= 3) {
-        return NextResponse.json({ error: 'Maximum 3 wallets allowed per account.' }, { status: 429 });
+        return NextResponse.json(
+            { error: 'Maximum 3 wallets allowed. Please remove an existing wallet to add a new one.' }, 
+            { status: 429 }
+        );
     }
 
     // Validate private key is a valid Ethereum key

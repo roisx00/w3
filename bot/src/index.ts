@@ -19,62 +19,48 @@ const POLL_MS = Number(process.env.POLL_INTERVAL_MS) || 3000;
 // Track which job IDs are currently being monitored
 const activeMonitors = new Map<string, () => void>(); // jobId → stopFn
 
-async function fetchActiveJobs(): Promise<MintBotJob[]> {
-    const snap = await db
-        .collection('mint_bot_jobs')
-        .where('status', '==', 'monitoring')
-        .get();
-
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as MintBotJob));
-}
-
-async function fetchStoppedJobIds(): Promise<Set<string>> {
-    const snap = await db
-        .collection('mint_bot_jobs')
-        .where('status', 'in', ['stopped', 'success', 'failed'])
-        .get();
-
-    return new Set(snap.docs.map(d => d.id));
-}
 
 async function mainLoop(): Promise<void> {
-    console.log(`[bot] Polling Firestore every ${POLL_MS}ms…`);
+    console.log(`[bot] Listening for Firestore changes (real-time)...`);
 
-    while (true) {
-        try {
-            // 1. Stop monitors for jobs that have been stopped/succeeded/failed externally
-            const doneIds = await fetchStoppedJobIds();
+    // Subscribe to monitoring jobs
+    const unsubscribe = db.collection('mint_bot_jobs')
+        .where('status', '==', 'monitoring')
+        .onSnapshot(async (snapshot) => {
+            const currentJobs = new Set<string>();
+
+            for (const doc of snapshot.docs) {
+                const job = { id: doc.id, ...doc.data() } as MintBotJob;
+                currentJobs.add(job.id);
+
+                if (!activeMonitors.has(job.id)) {
+                    console.log(`[bot] New monitoring job detected: ${job.id} → ${job.contractAddress}`);
+                    const stop = startMonitoring(job, (completedJobId) => {
+                        activeMonitors.delete(completedJobId);
+                        console.log(`[bot] Monitor finished for job ${completedJobId}`);
+                    });
+                    activeMonitors.set(job.id, stop);
+                }
+            }
+
+            // Stop monitors for jobs that are no longer in the monitoring snapshot
             for (const [jobId, stop] of activeMonitors) {
-                if (doneIds.has(jobId)) {
-                    console.log(`[bot] Stopping monitor for job ${jobId}`);
+                if (!currentJobs.has(jobId)) {
+                    console.log(`[bot] Job ${jobId} is no longer monitoring. Stopping monitor.`);
                     stop();
                     activeMonitors.delete(jobId);
                 }
             }
 
-            // 2. Start monitors for new active jobs
-            const jobs = await fetchActiveJobs();
-            for (const job of jobs) {
-                if (activeMonitors.has(job.id)) continue; // already running
+            console.log(`[bot] Active monitors: ${activeMonitors.size}`);
+        }, (err) => {
+            console.error('[bot] Snapshot error:', err.message);
+        });
 
-                console.log(`[bot] Spawning monitor for job ${job.id} → ${job.contractAddress}`);
-
-                const stop = startMonitoring(job, (completedJobId) => {
-                    activeMonitors.delete(completedJobId);
-                    console.log(`[bot] Monitor finished for job ${completedJobId}`);
-                });
-
-                activeMonitors.set(job.id, stop);
-            }
-
-            console.log(`[bot] ${activeMonitors.size} active monitor(s)`);
-        } catch (err: any) {
-            console.error('[bot] Poll error:', err.message);
-        }
-
-        await sleep(POLL_MS);
-    }
+    // Main loop is now just a wait for shutdown
+    return new Promise(() => {}); // Keep alive
 }
+
 
 function sleep(ms: number): Promise<void> {
     return new Promise(r => setTimeout(r, ms));
