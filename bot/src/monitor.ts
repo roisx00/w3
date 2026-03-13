@@ -1,0 +1,158 @@
+import { ethers } from 'ethers';
+import { MintBotJob } from './types';
+import { writeLog, updateJob } from './firestoreClient';
+import { executeMint } from './executor';
+import { getEthersSigner } from './walletManager';
+
+// State variable names commonly used to signal a public sale is live
+const ACTIVE_STATE_SELECTORS = [
+    'mintActive',
+    'saleActive',
+    'publicSaleActive',
+    'publicMintActive',
+    'isSaleActive',
+    'isMintActive',
+    'isPublicMintActive',
+    'publicSaleIsActive',
+];
+
+// ABI fragments for the above checks + paused()
+const STATE_ABI = [
+    ...ACTIVE_STATE_SELECTORS.map(name => `function ${name}() view returns (bool)`),
+    'function paused() view returns (bool)',
+    'function mint(uint256 quantity) payable',
+    'function publicMint(uint256 quantity) payable',
+    'function whitelistMint(uint256 quantity) payable',
+    'function mint() payable',
+    'function publicMint() payable',
+];
+
+/**
+ * Check whether the contract appears to have an open mint right now.
+ * Strategy:
+ *   1. Try known "active" state variables — if any returns true, mint is live.
+ *   2. If paused() exists and returns true, mint is not live.
+ *   3. Static-call the mint function — if it does NOT revert with a "not active"
+ *      type message, consider it potentially live and attempt a real tx.
+ */
+async function isMintLive(
+    contract: ethers.Contract,
+    job: MintBotJob,
+): Promise<boolean> {
+    // 1. Check positive state variables
+    for (const selector of ACTIVE_STATE_SELECTORS) {
+        try {
+            const result: boolean = await (contract as any)[selector]();
+            if (result === true) return true;
+        } catch {
+            // Function doesn't exist on this contract — skip
+        }
+    }
+
+    // 2. Check paused()
+    try {
+        const isPaused: boolean = await (contract as any).paused();
+        if (isPaused) return false;
+    } catch { /* no paused() — ignore */ }
+
+    // 3. Static-call the target mint function
+    try {
+        const value = ethers.parseEther(job.mintPrice || '0');
+        if (job.mintFunction === 'mint' || job.mintFunction === 'publicMint') {
+            try {
+                await (contract as any)[job.mintFunction].staticCall(job.mintAmount, { value });
+            } catch {
+                await (contract as any)[job.mintFunction].staticCall({ value });
+            }
+        } else {
+            await (contract as any)[job.mintFunction].staticCall(job.mintAmount, { value });
+        }
+        // Static call succeeded — mint is likely live
+        return true;
+    } catch (err: any) {
+        const msg = (err.reason || err.message || '').toLowerCase();
+        // These error strings strongly indicate the mint isn't live yet
+        const notLivePatterns = [
+            'not active', 'not live', 'not open', 'sale not', 'mint not',
+            'paused', 'not started', 'not begun', 'inactive', 'not enabled',
+            'before sale', 'presale', 'not started', 'coming soon',
+        ];
+        if (notLivePatterns.some(p => msg.includes(p))) return false;
+        // Any other revert (e.g. insufficient ETH, max supply) means mint IS live
+        // but the transaction parameters need adjustment — treat as "live"
+        return true;
+    }
+}
+
+/**
+ * Start monitoring a single job.
+ * Subscribes to new blocks, checks mint state each block.
+ * Returns a cleanup function to stop monitoring.
+ */
+export function startMonitoring(
+    job: MintBotJob,
+    onComplete: (jobId: string) => void,
+): () => void {
+    let stopped = false;
+    let executing = false;
+
+    (async () => {
+        await writeLog(job.id, job.userId, `Started monitoring ${job.contractAddress} on chain ${job.chainId}`, 'info');
+
+        const provider = new ethers.JsonRpcProvider(job.rpcUrl);
+        const contract = new ethers.Contract(job.contractAddress, STATE_ABI, provider);
+
+        const checkBlock = async (blockNumber: number) => {
+            if (stopped || executing) return;
+
+            try {
+                const live = await isMintLive(contract, job);
+                if (!live) {
+                    await writeLog(job.id, job.userId, `Block ${blockNumber} — mint not live yet, watching…`, 'info');
+                    return;
+                }
+
+                // Mint is live — execute immediately
+                executing = true;
+                stopped = true; // Stop block listener
+                provider.off('block', checkBlock);
+
+                await writeLog(job.id, job.userId, `🔥 MINT IS LIVE at block ${blockNumber}! Executing…`, 'warn');
+                await updateJob(job.id, { status: 'minting' });
+
+                // Get signer with decrypted wallet
+                const signer = await getEthersSigner(job.walletId, provider);
+
+                try {
+                    const txHash = await executeMint(job, signer);
+                    await updateJob(job.id, { status: 'success', txHash });
+                    await writeLog(job.id, job.userId, `✅ Mint successful! TX: ${txHash}`, 'success');
+                } catch (err: any) {
+                    const errMsg = err.reason || err.message || 'Unknown error';
+                    await updateJob(job.id, { status: 'failed', error: errMsg });
+                    await writeLog(job.id, job.userId, `❌ Mint failed: ${errMsg}`, 'error');
+                }
+
+                onComplete(job.id);
+            } catch (err: any) {
+                await writeLog(job.id, job.userId, `Block ${blockNumber} check error: ${err.message}`, 'warn');
+            }
+        };
+
+        provider.on('block', checkBlock);
+
+        // Graceful shutdown: resolve when stopped externally
+        const poll = setInterval(() => {
+            if (stopped) {
+                clearInterval(poll);
+                provider.removeAllListeners();
+            }
+        }, 1000);
+    })().catch(async (err) => {
+        await writeLog(job.id, job.userId, `Monitor crashed: ${err.message}`, 'error');
+        await updateJob(job.id, { status: 'failed', error: err.message });
+        onComplete(job.id);
+    });
+
+    return () => { stopped = true; };
+}

@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { checkBadgePromo } from '@/lib/promos';
 import { JobPosting, Airdrop } from '@/lib/types';
-import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle } from 'lucide-react';
+import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle, Bot } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import { PRICES } from '@/lib/payments';
 import Link from 'next/link';
@@ -378,6 +378,28 @@ function DashboardContent() {
                                         <p className="text-xs text-foreground/40 font-medium">Hire Web3 talent for your project</p>
                                     </div>
                                 </div>
+                            </Link>
+
+                            <Link
+                                href="/dashboard/tools/mint-bot"
+                                className="group glass p-6 hover:border-accent-primary/40 transition-all relative overflow-hidden border-accent-primary/10"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-accent-primary/5 rounded-full blur-[60px] -mr-16 -mt-16 group-hover:bg-accent-primary/10 transition-colors" />
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                                        <Bot className="w-6 h-6 text-accent-primary" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-display font-black text-base uppercase tracking-tight mb-0.5 flex items-center gap-2">
+                                            Mint Sniper Bot
+                                            <ArrowUpRight className="w-4 h-4 text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </h3>
+                                        <p className="text-xs text-foreground/40 font-medium">Auto-mint NFTs the moment sale opens</p>
+                                    </div>
+                                </div>
+                                <span className="absolute top-3 right-3 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-accent-primary/20 text-accent-primary rounded-full border border-accent-primary/20">
+                                    New
+                                </span>
                             </Link>
                         </div>
                     </section>
