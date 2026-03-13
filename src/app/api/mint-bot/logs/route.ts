@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 // GET /api/mint-bot/logs?jobId=xxx  — stream recent logs for a job
 export async function GET(req: NextRequest) {
@@ -15,6 +16,6 @@ export async function GET(req: NextRequest) {
         .limit(50)
         .get();
 
-    const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const logs = snap.docs.map((d: QueryDocumentSnapshot) => ({ id: d.id, ...d.data() }));
     return NextResponse.json({ logs });
 }
