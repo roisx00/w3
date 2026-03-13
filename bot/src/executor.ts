@@ -33,15 +33,15 @@ async function buildGasOptions(
         // EIP-1559
         const mul = BigInt(Math.round(multiplier * 100));
         return {
-            maxFeePerGas: (feeData.maxFeePerGas * mul) / 100n,
-            maxPriorityFeePerGas: (feeData.maxPriorityFeePerGas * mul) / 100n,
+            maxFeePerGas: (feeData.maxFeePerGas * mul) / BigInt(100),
+            maxPriorityFeePerGas: (feeData.maxPriorityFeePerGas * mul) / BigInt(100),
         };
     }
 
     // Legacy
-    const gasPrice = feeData.gasPrice ?? 0n;
+    const gasPrice = feeData.gasPrice ?? BigInt(0);
     const mul = BigInt(Math.round(multiplier * 100));
-    return { gasPrice: (gasPrice * mul) / 100n };
+    return { gasPrice: (gasPrice * mul) / BigInt(100) };
 }
 
 /**
