@@ -33,13 +33,18 @@ export async function POST(req: NextRequest) {
 
     try {
         // Step 0: Check if this transaction hash has already been used
-        const existing = await adminDb.collection('payments')
-            .where('txHash', '==', txHash)
-            .limit(1)
-            .get();
-        
-        if (!existing.empty) {
-            return NextResponse.json({ valid: false, error: 'This transaction has already been used.' });
+        // Skip if adminDb is not initialized (e.g. missing service account key)
+        if (adminDb) {
+            const existing = await adminDb.collection('payments')
+                .where('txHash', '==', txHash)
+                .limit(1)
+                .get();
+            
+            if (!existing.empty) {
+                return NextResponse.json({ valid: false, error: 'This transaction has already been used.' });
+            }
+        } else {
+            console.warn('Skipping duplicate hash check: adminDb not initialized.');
         }
 
         const res = await fetch(rpcUrl, {

@@ -4,22 +4,22 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
 if (!getApps().length) {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not defined in environment variables');
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    
+    if (serviceAccountKey) {
+        try {
+            const serviceAccount = JSON.parse(serviceAccountKey);
+            initializeApp({
+                credential: cert(serviceAccount),
+            });
+            console.log('Firebase-admin initialized successfully');
+        } catch (e) {
+            console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY', e);
+        }
+    } else {
+        console.warn('FIREBASE_SERVICE_ACCOUNT_KEY not found. Server-side admin Firestore will be unavailable.');
     }
-
-    let serviceAccount;
-    try {
-        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-    } catch (e) {
-        console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY', e);
-        serviceAccount = {};
-    }
-
-    initializeApp({
-        credential: cert(serviceAccount),
-    });
 }
 
-export const adminDb = getFirestore();
-export const adminAuth = getAuth();
+export const adminDb = getApps().length ? getFirestore() : null as any;
+export const adminAuth = getApps().length ? getAuth() : null as any;
