@@ -7,6 +7,7 @@ import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 // GET  /api/mint-bot/wallets?userId=xxx  — list wallets (addresses only, no keys)
 export async function GET(req: NextRequest) {
+    return NextResponse.json({ error: 'Mint Bot is temporarily disabled for maintenance.' }, { status: 503 });
     const userId = req.nextUrl.searchParams.get('userId');
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
@@ -28,6 +29,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/mint-bot/wallets  — add a wallet
 export async function POST(req: NextRequest) {
+    return NextResponse.json({ error: 'Mint Bot is temporarily disabled for maintenance.' }, { status: 503 });
     const { userId, name, privateKey } = await req.json();
 
     if (!userId || !name || !privateKey) {

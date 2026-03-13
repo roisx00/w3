@@ -4,6 +4,7 @@ import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 // GET /api/mint-bot/logs?jobId=xxx  — stream recent logs for a job
 export async function GET(req: NextRequest) {
+    return NextResponse.json({ error: 'Mint Bot is temporarily disabled for maintenance.' }, { status: 503 });
     const jobId = req.nextUrl.searchParams.get('jobId');
     if (!jobId) return NextResponse.json({ error: 'jobId required' }, { status: 400 });
 

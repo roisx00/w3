@@ -22,6 +22,7 @@ function sanitizeJob(id: string, data: Record<string, unknown>) {
 
 // GET  /api/mint-bot/jobs?userId=xxx
 export async function GET(req: NextRequest) {
+    return NextResponse.json({ error: 'Mint Bot is temporarily disabled for maintenance.' }, { status: 503 });
     const userId = req.nextUrl.searchParams.get('userId');
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/mint-bot/jobs
 export async function POST(req: NextRequest) {
+    return NextResponse.json({ error: 'Mint Bot is temporarily disabled for maintenance.' }, { status: 503 });
     const body = await req.json();
     const {
         userId, walletId, walletAddress, contractAddress,

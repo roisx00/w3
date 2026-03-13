@@ -21,6 +21,12 @@ const activeMonitors = new Map<string, () => void>(); // jobId → stopFn
 
 
 async function mainLoop(): Promise<void> {
+    const IS_LOCKED = true; // GLOBAL LOCK
+    if (IS_LOCKED) {
+        console.warn('⚠️ [bot] MINT BOT IS GLOBALLY LOCKED. EXITING...');
+        process.exit(0);
+    }
+
     console.log(`[bot] Listening for Firestore changes (real-time)...`);
 
     // Subscribe to monitoring jobs

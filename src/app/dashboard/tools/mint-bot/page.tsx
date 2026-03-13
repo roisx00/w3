@@ -207,8 +207,9 @@ export default function MintBotPage() {
         );
     }
 
-    // Golden Badge gate
-    if (!user?.hasBadge) {
+    // Global Lockdown Check
+    const IS_LOCKED = true;
+    if (IS_LOCKED) {
         return (
             <div className="max-w-6xl mx-auto px-6 py-12 space-y-8">
                 <div className="flex items-center gap-2 text-xs text-foreground/30 font-bold uppercase tracking-widest">
@@ -219,29 +220,15 @@ export default function MintBotPage() {
                     <span className="text-foreground">Mint Bot</span>
                 </div>
                 <div className="flex flex-col items-center justify-center py-24 gap-6 text-center">
-                    <div className="w-20 h-20 rounded-3xl bg-accent-warning/10 border border-accent-warning/20 flex items-center justify-center">
-                        <Lock className="w-9 h-9 text-accent-warning" />
+                    <div className="w-20 h-20 rounded-3xl bg-accent-danger/10 border border-accent-danger/20 flex items-center justify-center">
+                        <Lock className="w-9 h-9 text-accent-danger" />
                     </div>
                     <div className="space-y-2 max-w-md">
-                        <h1 className="font-display font-black text-2xl uppercase tracking-tight">Premium Tool</h1>
+                        <h1 className="font-display font-black text-2xl uppercase tracking-tight text-accent-danger">Service Locked</h1>
                         <p className="text-foreground/50 text-sm leading-relaxed">
-                            The NFT Mint Sniper Bot is available exclusively for <strong className="text-accent-warning">Golden Badge</strong> holders.
-                            Get your badge to unlock multi-wallet contract monitoring and auto-minting.
+                            The NFT Mint Sniper Bot is temporarily <strong className="text-accent-danger">Disabled</strong> due to high maintenance and Firebase quota limits.
+                            We are working on a new architecture to restore service soon.
                         </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <Link
-                            href="/dashboard"
-                            className="flex items-center gap-2 px-6 py-3 bg-accent-warning text-black font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_8px_24px_rgba(251,191,36,0.3)]"
-                        >
-                            <ShieldCheck className="w-4 h-4" /> Get Golden Badge — $2
-                        </Link>
-                        <Link
-                            href="/pricing"
-                            className="px-6 py-3 glass border border-white/10 text-foreground/50 font-black text-xs uppercase tracking-widest rounded-xl hover:text-foreground transition-colors"
-                        >
-                            View Pricing
-                        </Link>
                     </div>
                 </div>
             </div>
