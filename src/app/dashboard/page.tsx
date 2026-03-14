@@ -5,8 +5,8 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { checkBadgePromo } from '@/lib/promos';
-import { JobPosting, Airdrop } from '@/lib/types';
-import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle, Bot } from 'lucide-react';
+import { JobPosting, Airdrop, TalentProfile } from '@/lib/types';
+import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle, Bot, Users as UsersIcon, Eye, Bookmark } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import { PRICES } from '@/lib/payments';
 import Link from 'next/link';
@@ -23,9 +23,10 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-    const { user, bookmarkedJobs, trackedAirdrops, updateProfile, logReferralEarning, logout } = useAppContext();
+    const { user, bookmarkedJobs, trackedAirdrops, savedResumes, updateProfile, logReferralEarning, logout } = useAppContext();
     const [savedJobsData, setSavedJobsData] = useState<JobPosting[]>([]);
     const [trackedAirdropsData, setTrackedAirdropsData] = useState<Airdrop[]>([]);
+    const [savedResumesData, setSavedResumesData] = useState<TalentProfile[]>([]);
     const [showBadgeModal, setShowBadgeModal] = useState(false);
     const [showBoostModal, setShowBoostModal] = useState(false);
     const [paymentLoading, setPaymentLoading] = useState(false);
@@ -113,6 +114,22 @@ function DashboardContent() {
         }
         fetchTracked();
     }, [trackedAirdrops]);
+
+    useEffect(() => {
+        async function fetchSavedResumes() {
+            if (savedResumes.length > 0) {
+                const results = await Promise.all(
+                    savedResumes.map(id => getDoc(doc(db, 'talents', id)))
+                );
+                setSavedResumesData(
+                    results.filter(d => d.exists()).map(d => ({ id: d.id, ...d.data() } as TalentProfile))
+                );
+            } else {
+                setSavedResumesData([]);
+            }
+        }
+        fetchSavedResumes();
+    }, [savedResumes]);
 
     // Profile score starts at 80 for new members; completing all 6 fields reaches 100
     const profileFields = [user?.displayName, user?.bio, user?.walletAddress, user?.roles?.length, user?.skills?.length, user?.resumeUrl];
@@ -209,6 +226,7 @@ function DashboardContent() {
                             </div>
                         </div>
                     </div>
+
 
                     <nav className="glass p-4 space-y-1">
                         <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl text-accent-primary font-bold text-sm">
@@ -451,6 +469,39 @@ function DashboardContent() {
                                 )}
                             </div>
                         </section>
+
+                        {user?.roles?.includes('Founder') && (
+                            <section className="md:col-span-2">
+                                <h4 className="font-display font-black text-xl mb-6 flex items-center gap-3">
+                                    Saved Resumes
+                                    <span className="px-2 py-0.5 bg-accent-secondary/10 text-accent-secondary text-[10px] rounded font-black">{savedResumesData.length}</span>
+                                </h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {savedResumesData.length > 0 ? savedResumesData.map(talent => (
+                                        <Link key={talent.id} href={`/talents/${talent.id}`} className="glass p-4 group hover:border-accent-secondary/30 transition-colors flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-accent-secondary/10 border border-accent-secondary/20 flex items-center justify-center font-bold text-accent-secondary text-sm overflow-hidden shrink-0">
+                                                {talent.photoUrl 
+                                                    ? <img src={talent.photoUrl} alt="" className="w-full h-full object-cover" />
+                                                    : talent.displayName?.charAt(0)
+                                                }
+                                            </div>
+                                            <div className="flex-1">
+                                                <h5 className="font-bold text-sm leading-none flex items-center gap-1.5">
+                                                    {talent.displayName}
+                                                </h5>
+                                                <p className="text-[10px] text-foreground/40 mt-1 uppercase tracking-widest font-bold">@{talent.username}</p>
+                                            </div>
+                                            <ArrowUpRight className="w-4 h-4 text-foreground/20 group-hover:text-accent-secondary transition-colors" />
+                                        </Link>
+                                    )) : (
+                                        <div className="col-span-full py-10 glass border-dashed border-white/5 flex flex-col items-center justify-center gap-3 text-foreground/20 italic text-sm">
+                                            <Bookmark className="w-8 h-8 opacity-20" />
+                                            No resumes saved yet.
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+                        )}
 
                         {/* Applications Received */}
                         {applications.length > 0 && (

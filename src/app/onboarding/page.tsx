@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ArrowLeft, CheckCircle2, User, Briefcase, Award, Plus, Trash2, Copy, Share2, Camera, Loader2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle2, XCircle, User, Briefcase, Award, Plus, Trash2, Copy, Share2, Camera, Loader2 } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
 import { UserRole, Experience } from '@/lib/types';
 import AuthGuard from '@/components/auth/AuthGuard';
@@ -66,6 +66,7 @@ function OnboardingContent() {
             });
         }
     }, [user?.id]);
+
 
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -328,8 +329,8 @@ function OnboardingContent() {
                             <div>
                                 <label className="block text-xs font-bold text-foreground/40 uppercase tracking-widest mb-2 px-1">Username</label>
                                 <input type="text" value={formData.username}
-                                    onChange={e => setFormData({ ...formData, username: e.target.value })}
-                                    placeholder="vitalik.eth"
+                                    onChange={e => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
+                                    placeholder="vitalik_eth"
                                     className="w-full glass bg-white/5 border-white/10 px-6 py-4 focus:border-accent-primary/50 outline-none transition-colors font-medium rounded-2xl" />
                             </div>
                             <div>
@@ -380,7 +381,7 @@ function OnboardingContent() {
                         <h2 className="font-display text-3xl font-extrabold mb-2">What's your <span className="text-accent-secondary">alpha?</span></h2>
                         <p className="text-foreground/40 text-sm mb-8">Select the roles you excel at. You can pick multiple.</p>
                         <div className="grid grid-cols-2 gap-4">
-                            {(['Developer', 'Ambassador', 'Community Manager', 'Designer', 'Marketing', 'Researcher', 'Moderator', 'Project Manager'] as UserRole[]).map(role => (
+                            {(['Developer', 'Ambassador', 'Community Manager', 'Designer', 'Marketing', 'Researcher', 'Moderator', 'Project Manager', 'Founder'] as UserRole[]).map(role => (
                                 <button key={role} onClick={() => toggleRole(role)}
                                     className={`px-6 py-4 rounded-xl border-2 text-left font-bold transition-all ${formData.roles.includes(role)
                                             ? 'bg-accent-secondary/10 border-accent-secondary text-accent-secondary shadow-[0_0_15px_rgba(168,85,247,0.2)]'

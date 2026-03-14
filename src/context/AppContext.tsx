@@ -27,12 +27,14 @@ interface AppState {
     authLoading: boolean;
     bookmarkedJobs: string[];
     trackedAirdrops: string[];
+    savedResumes: string[];
     login: () => void;
     loginWithEmail: (email: string, password: string) => Promise<void>;
     registerWithEmail: (email: string, password: string) => Promise<void>;
     logout: () => void;
     toggleBookmarkJob: (jobId: string) => void;
     toggleTrackAirdrop: (airdropId: string) => void;
+    toggleSaveResume: (talentId: string) => void;
     updateProfile: (profile: Partial<TalentProfile>) => void;
     logReferralEarning: (paymentType: string, amount: number, txHash: string, payer: TalentProfile) => Promise<void>;
 }
@@ -45,6 +47,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [authLoading, setAuthLoading] = useState(true);
     const [bookmarkedJobs, setBookmarkedJobs] = useState<string[]>([]);
     const [trackedAirdrops, setTrackedAirdrops] = useState<string[]>([]);
+    const [savedResumes, setSavedResumes] = useState<string[]>([]);
 
     // Monitor Auth State
     useEffect(() => {
@@ -93,6 +96,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         if (Array.isArray(data.trackedAirdrops)) {
                             setTrackedAirdrops(data.trackedAirdrops);
                             localStorage.setItem('hub_tracked_airdrops', JSON.stringify(data.trackedAirdrops));
+                        }
+                        if (Array.isArray(data.savedResumes)) {
+                            setSavedResumes(data.savedResumes);
+                            localStorage.setItem('hub_saved_resumes', JSON.stringify(data.savedResumes));
                         }
                     } else {
                         // New user — check if they came via a referral link
@@ -168,8 +175,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     useEffect(() => {
         const savedJobs = localStorage.getItem('hub_bookmarked_jobs');
         const savedAirdrops = localStorage.getItem('hub_tracked_airdrops');
+        const savedRes = localStorage.getItem('hub_saved_resumes');
         if (savedJobs) setBookmarkedJobs(JSON.parse(savedJobs));
         if (savedAirdrops) setTrackedAirdrops(JSON.parse(savedAirdrops));
+        if (savedRes) setSavedResumes(JSON.parse(savedRes));
     }, []);
 
     // Keep localStorage in sync
@@ -180,6 +189,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     useEffect(() => {
         localStorage.setItem('hub_tracked_airdrops', JSON.stringify(trackedAirdrops));
     }, [trackedAirdrops]);
+
+    useEffect(() => {
+        localStorage.setItem('hub_saved_resumes', JSON.stringify(savedResumes));
+    }, [savedResumes]);
 
     const toggleBookmarkJob = (jobId: string) => {
         const newBookmarks = bookmarkedJobs.includes(jobId)
@@ -204,6 +217,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const uid = auth.currentUser?.uid;
         if (uid) {
             setDoc(doc(db, 'talents', uid), { trackedAirdrops: newTracked }, { merge: true }).catch(console.error);
+        }
+    };
+
+    const toggleSaveResume = (talentId: string) => {
+        const newSaved = savedResumes.includes(talentId)
+            ? savedResumes.filter(id => id !== talentId)
+            : [...savedResumes, talentId];
+        setSavedResumes(newSaved);
+
+        const uid = auth.currentUser?.uid;
+        if (uid) {
+            setDoc(doc(db, 'talents', uid), { savedResumes: newSaved }, { merge: true }).catch(console.error);
         }
     };
 
@@ -253,12 +278,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             authLoading,
             bookmarkedJobs,
             trackedAirdrops,
+            savedResumes,
             login,
             loginWithEmail,
             registerWithEmail,
             logout,
             toggleBookmarkJob,
             toggleTrackAirdrop,
+            toggleSaveResume,
             updateProfile,
             logReferralEarning,
         }}>

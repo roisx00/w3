@@ -6,7 +6,8 @@ export type UserRole =
     | 'Designer'
     | 'Developer'
     | 'Marketing'
-    | 'Researcher';
+    | 'Researcher'
+    | 'Founder';
 
 export interface Experience {
     id: string;
@@ -48,6 +49,9 @@ export interface TalentProfile {
     reputationScore?: number;   // 0–100, blend of profileScore + reviews
     reviewCount?: number;
     referredBy?: string;        // userId of referrer
+    views?: number;
+    isFounderVerified?: boolean;
+    savedResumes?: string[];
 }
 
 export interface ReferralEarning {

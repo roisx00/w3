@@ -2,18 +2,26 @@
 
 import { useState } from 'react';
 import { TalentProfile } from '@/lib/types';
-import { Twitter, Send, Github, Globe, MapPin, Briefcase, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Twitter, Send, Github, Globe, MapPin, Briefcase, ExternalLink, CheckCircle2, Eye, Bookmark } from 'lucide-react';
 import Link from 'next/link';
 import GoldBadge from '@/components/GoldBadge';
+import FounderBadge from '@/components/FounderBadge';
+import { useAppContext } from '@/context/AppContext';
 
 interface TalentCardProps {
     talent: TalentProfile;
 }
 
 const TalentCard = ({ talent }: TalentCardProps) => {
+    const { user, savedResumes, toggleSaveResume } = useAppContext();
     const [copied, setCopied] = useState(false);
 
-    const handleCopyWallet = () => {
+    const isFounder = user?.roles?.includes('Founder');
+    const isSaved = savedResumes.includes(talent.id!);
+
+    const handleCopyWallet = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (!talent.walletAddress) return;
         navigator.clipboard.writeText(talent.walletAddress);
         setCopied(true);
@@ -32,16 +40,22 @@ const TalentCard = ({ talent }: TalentCardProps) => {
                                 talent.displayName.charAt(0)
                             )}
                         </div>
-                        {talent.openToWork && (
-                            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-accent-success border-2 border-background flex items-center justify-center">
-                                <span className="w-2 h-2 rounded-full bg-accent-success animate-ping absolute" />
-                            </span>
+                        {talent.hasBadge && (
+                            <div className="absolute -bottom-1 -right-1">
+                                <GoldBadge size={16} />
+                            </div>
+                        )}
+                        {talent.isFounderVerified && (
+                            <div className="absolute -top-1 -right-1">
+                                <FounderBadge size={16} />
+                            </div>
                         )}
                     </div>
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-display font-bold text-lg leading-none">{talent.displayName}</h3>
                             {talent.hasBadge && <GoldBadge size={16} />}
+                            {talent.isFounderVerified && <FounderBadge size={16} />}
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-xs text-foreground/40 font-medium tracking-tight">@{talent.username}</span>
@@ -54,6 +68,29 @@ const TalentCard = ({ talent }: TalentCardProps) => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {talent.views !== undefined && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-foreground/30" title="Total profile views">
+                            <Eye className="w-2.5 h-2.5" />
+                            {talent.views}
+                        </div>
+                    )}
+                    {isFounder && (
+                        <button 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleSaveResume(talent.id!);
+                            }}
+                            className={`p-1.5 rounded-lg border transition-all ${
+                                isSaved 
+                                    ? 'bg-accent-secondary border-accent-secondary text-white' 
+                                    : 'border-white/5 text-foreground/20 hover:text-accent-secondary hover:border-accent-secondary/50'
+                            }`}
+                            title={isSaved ? "Remove from Saved" : "Save Resume"}
+                        >
+                            <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
+                        </button>
+                    )}
                     {(() => {
                         const displayScore = talent.reputationScore ?? talent.profileScore ?? 0;
                         if (displayScore <= 0) return null;
