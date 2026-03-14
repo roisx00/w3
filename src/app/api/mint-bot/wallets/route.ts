@@ -1,35 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
+import { supabase } from '@/lib/supabase';
 import { encryptPrivateKey } from '@/lib/mintBot/encryption';
-import { MintBotWallet } from '@/lib/mintBot/types';
 import { ethers } from 'ethers';
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
-// GET  /api/mint-bot/wallets?userId=xxx  — list wallets (addresses only, no keys)
+// GET  /api/mint-bot/wallets?userId=xxx  — list wallets
 export async function GET(req: NextRequest) {
-    return NextResponse.json({ error: 'Mint Bot is temporarily disabled for maintenance.' }, { status: 503 });
     const userId = req.nextUrl.searchParams.get('userId');
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
-    if (!adminDb) return NextResponse.json({ error: 'Server not configured.' }, { status: 503 });
+    const { data: wallets, error } = await supabase
+        .from('wallets')
+        .select('id, name, address, created_at')
+        .eq('firebase_user_id', userId);
 
-    const snap = await adminDb
-        .collection('mint_bot_wallets')
-        .where('userId', '==', userId)
-        .get();
-
-    const wallets = snap.docs.map((d: QueryDocumentSnapshot) => {
-        const data = d.data() as MintBotWallet;
-        // Never return the encrypted key to the frontend
-        return { id: d.id, name: data.name, address: data.address, createdAt: data.createdAt };
-    });
+    if (error) {
+        console.error('[supabase-error]', error);
+        return NextResponse.json({ error: 'Failed to fetch wallets' }, { status: 500 });
+    }
 
     return NextResponse.json({ wallets });
 }
 
 // POST /api/mint-bot/wallets  — add a wallet
 export async function POST(req: NextRequest) {
-    return NextResponse.json({ error: 'Mint Bot is temporarily disabled for maintenance.' }, { status: 503 });
     const { userId, name, privateKey } = await req.json();
 
     if (!userId || !name || !privateKey) {
@@ -38,45 +32,57 @@ export async function POST(req: NextRequest) {
 
     if (!adminDb) return NextResponse.json({ error: 'Server not configured.' }, { status: 503 });
 
-    // Verify user has Golden Badge
+    // Verify user has Golden Badge (Keep Firebase for Auth/Talents)
     const userDoc = await adminDb.collection('talents').doc(userId).get();
     if (!userDoc.exists || !userDoc.data()?.hasBadge) {
         return NextResponse.json({ error: 'Golden Badge required to use Mint Bot.' }, { status: 403 });
     }
 
     // Enforce strict wallet limit (max 3)
-    const existingSnap = await adminDb.collection('mint_bot_wallets')
-        .where('userId', '==', userId)
-        .get();
+    const { count, error: countError } = await supabase
+        .from('wallets')
+        .select('*', { count: 'exact', head: true })
+        .eq('firebase_user_id', userId);
         
-    if (existingSnap.size >= 3) {
+    if (countError) {
+        return NextResponse.json({ error: 'Failed to verify wallet count' }, { status: 500 });
+    }
+        
+    if (count && count >= 3) {
         return NextResponse.json(
-            { error: 'Maximum 3 wallets allowed. Please remove an existing wallet to add a new one.' }, 
+            { error: 'Maximum 3 wallets allowed.' }, 
             { status: 429 }
         );
     }
 
-    // Validate private key is a valid Ethereum key
+    // Validate private key
+    let wallet;
     try {
-        new ethers.Wallet(privateKey);
+        wallet = new ethers.Wallet(privateKey);
     } catch {
         return NextResponse.json({ error: 'Invalid private key.' }, { status: 400 });
     }
 
-    const wallet = new ethers.Wallet(privateKey);
     const { encrypted, iv, tag } = encryptPrivateKey(privateKey);
 
-    const doc = await adminDb.collection('mint_bot_wallets').add({
-        userId,
-        name,
-        address: wallet.address,
-        encryptedKey: encrypted,
-        iv,
-        tag,
-        createdAt: new Date(),
-    });
+    const { data, error: insertError } = await supabase
+        .from('wallets')
+        .insert({
+            firebase_user_id: userId,
+            name,
+            address: wallet.address,
+            encrypted_key: encrypted,
+            iv,
+            tag,
+        })
+        .select()
+        .single();
 
-    return NextResponse.json({ id: doc.id, address: wallet.address, name });
+    if (insertError) {
+        return NextResponse.json({ error: insertError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ id: data.id, address: wallet.address, name: data.name });
 }
 
 // DELETE /api/mint-bot/wallets?id=xxx&userId=xxx  — remove a wallet
@@ -85,14 +91,15 @@ export async function DELETE(req: NextRequest) {
     const userId = req.nextUrl.searchParams.get('userId');
     if (!id || !userId) return NextResponse.json({ error: 'id and userId required' }, { status: 400 });
 
-    if (!adminDb) return NextResponse.json({ error: 'Server not configured.' }, { status: 503 });
+    const { error } = await supabase
+        .from('wallets')
+        .delete()
+        .eq('id', id)
+        .eq('firebase_user_id', userId);
 
-    const docRef = adminDb.collection('mint_bot_wallets').doc(id);
-    const snap = await docRef.get();
-    if (!snap.exists || snap.data()?.userId !== userId) {
-        return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+    if (error) {
+        return NextResponse.json({ error: 'Failed to delete wallet' }, { status: 500 });
     }
 
-    await docRef.delete();
     return NextResponse.json({ ok: true });
 }

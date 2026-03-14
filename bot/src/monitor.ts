@@ -1,7 +1,6 @@
-// @ts-nocheck
 import { ethers } from 'ethers';
 import { MintBotJob } from './types';
-import { writeLog, updateJob } from './firestoreClient';
+import { supabase } from './supabaseClient';
 import { executeMint } from './executor';
 import { getEthersSigner } from './walletManager';
 
@@ -66,15 +65,15 @@ async function isMintLive(
 
     // 3. Static-call the target mint function
     try {
-        const value = ethers.parseEther(job.mintPrice || '0');
-        if (job.mintFunction === 'mint' || job.mintFunction === 'publicMint') {
+        const value = ethers.parseEther(job.mint_price || '0');
+        if (job.mint_function === 'mint' || job.mint_function === 'publicMint') {
             try {
-                await (contract as any)[job.mintFunction].staticCall(job.mintAmount, { value });
+                await (contract as any)[job.mint_function].staticCall(job.mint_amount, { value });
             } catch {
-                await (contract as any)[job.mintFunction].staticCall({ value });
+                await (contract as any)[job.mint_function].staticCall({ value });
             }
         } else {
-            await (contract as any)[job.mintFunction].staticCall(job.mintAmount, { value });
+            await (contract as any)[job.mint_function].staticCall(job.mint_amount, { value });
         }
         // Static call succeeded — mint is likely live
         return true;
@@ -106,19 +105,24 @@ export function startMonitoring(
     let executing = false;
 
     (async () => {
-        await writeLog(job.id, job.userId, `Started monitoring ${job.contractAddress} on chain ${job.chainId}`, 'info');
+        await supabase.from('bot_logs').insert({
+            job_id: job.id,
+            firebase_user_id: job.firebase_user_id,
+            message: `Started monitoring ${job.contract_address} on chain ${job.chain_id}`,
+            type: 'info'
+        });
 
-        const provider = new ethers.JsonRpcProvider(job.rpcUrl);
+        const provider = new ethers.JsonRpcProvider(job.rpc_url);
         
         // Dynamically build ABI for state checks
         const dynamicAbi = [...STATE_ABI];
-        const isStandard = STATE_ABI.some(s => s.includes(`function ${job.mintFunction}(`));
+        const isStandard = STATE_ABI.some(s => s.includes(`function ${job.mint_function}(`));
         if (!isStandard) {
-            dynamicAbi.push(`function ${job.mintFunction}(uint256 quantity) payable`);
-            dynamicAbi.push(`function ${job.mintFunction}() payable`);
+            dynamicAbi.push(`function ${job.mint_function}(uint256 quantity) payable`);
+            dynamicAbi.push(`function ${job.mint_function}() payable`);
         }
 
-        const contract = new ethers.Contract(job.contractAddress, dynamicAbi, provider);
+        const contract = new ethers.Contract(job.contract_address, dynamicAbi, provider);
 
 
         const checkBlock = async (blockNumber: number) => {
@@ -127,7 +131,12 @@ export function startMonitoring(
             try {
                 const live = await isMintLive(contract, job);
                 if (!live) {
-                    await writeLog(job.id, job.userId, `Block ${blockNumber} — mint not live yet, watching…`, 'info');
+                    await supabase.from('bot_logs').insert({
+                        job_id: job.id,
+                        firebase_user_id: job.firebase_user_id,
+                        message: `Block ${blockNumber} — mint not live yet, watching…`,
+                        type: 'info'
+                    });
                     return;
                 }
 
@@ -136,25 +145,46 @@ export function startMonitoring(
                 stopped = true; // Stop block listener
                 provider.off('block', checkBlock);
 
-                await writeLog(job.id, job.userId, `🔥 MINT IS LIVE at block ${blockNumber}! Executing…`, 'warn');
-                await updateJob(job.id, { status: 'minting' });
+                await supabase.from('bot_logs').insert({
+                    job_id: job.id,
+                    firebase_user_id: job.firebase_user_id,
+                    message: `🔥 MINT IS LIVE at block ${blockNumber}! Executing…`,
+                    type: 'warn'
+                });
+                
+                await supabase.from('mint_jobs').update({ status: 'minting', updated_at: new Date().toISOString() }).eq('id', job.id);
 
                 // Get signer with decrypted wallet
-                const signer = await getEthersSigner(job.walletId, provider);
+                const signer = await getEthersSigner(job.wallet_id, provider);
 
                 try {
                     const txHash = await executeMint(job, signer);
-                    await updateJob(job.id, { status: 'success', txHash });
-                    await writeLog(job.id, job.userId, `✅ Mint successful! TX: ${txHash}`, 'success');
+                    await supabase.from('mint_jobs').update({ status: 'success', tx_hash: txHash, updated_at: new Date().toISOString() }).eq('id', job.id);
+                    await supabase.from('bot_logs').insert({
+                        job_id: job.id,
+                        firebase_user_id: job.firebase_user_id,
+                        message: `✅ Mint successful! TX: ${txHash}`,
+                        type: 'success'
+                    });
                 } catch (err: any) {
                     const errMsg = err.reason || err.message || 'Unknown error';
-                    await updateJob(job.id, { status: 'failed', error: errMsg });
-                    await writeLog(job.id, job.userId, `❌ Mint failed: ${errMsg}`, 'error');
+                    await supabase.from('mint_jobs').update({ status: 'failed', error_message: errMsg, updated_at: new Date().toISOString() }).eq('id', job.id);
+                    await supabase.from('bot_logs').insert({
+                        job_id: job.id,
+                        firebase_user_id: job.firebase_user_id,
+                        message: `❌ Mint failed: ${errMsg}`,
+                        type: 'error'
+                    });
                 }
 
                 onComplete(job.id);
             } catch (err: any) {
-                await writeLog(job.id, job.userId, `Block ${blockNumber} check error: ${err.message}`, 'warn');
+                await supabase.from('bot_logs').insert({
+                    job_id: job.id,
+                    firebase_user_id: job.firebase_user_id,
+                    message: `Block ${blockNumber} check error: ${err.message}`,
+                    type: 'warn'
+                });
             }
         };
 
@@ -168,8 +198,13 @@ export function startMonitoring(
             }
         }, 1000);
     })().catch(async (err) => {
-        await writeLog(job.id, job.userId, `Monitor crashed: ${err.message}`, 'error');
-        await updateJob(job.id, { status: 'failed', error: err.message });
+        await supabase.from('bot_logs').insert({
+            job_id: job.id,
+            firebase_user_id: job.firebase_user_id,
+            message: `Monitor crashed: ${err.message}`,
+            type: 'error'
+        });
+        await supabase.from('mint_jobs').update({ status: 'failed', error_message: err.message, updated_at: new Date().toISOString() }).eq('id', job.id);
         onComplete(job.id);
     });
 

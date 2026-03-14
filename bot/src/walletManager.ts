@@ -1,7 +1,6 @@
-// @ts-nocheck
 import crypto from 'crypto';
 import { ethers } from 'ethers';
-import { db } from './firestoreClient';
+import { supabase } from './supabaseClient';
 import { MintBotWallet } from './types';
 
 const ALGORITHM = 'aes-256-gcm';
@@ -17,7 +16,6 @@ function getKey(): Buffer {
 
 /**
  * Decrypts a stored encrypted private key.
- * Throws if the auth tag is invalid — protect against tampered storage.
  */
 export function decryptPrivateKey(encrypted: string, iv: string, tag: string): string {
     const key = getKey();
@@ -30,18 +28,22 @@ export function decryptPrivateKey(encrypted: string, iv: string, tag: string): s
 }
 
 /**
- * Fetch a wallet from Firestore and return a ready ethers.Wallet signer.
- * The provider is attached so the signer can send transactions.
+ * Fetch a wallet from Supabase and return a ready ethers.Wallet signer.
  */
 export async function getEthersSigner(
     walletId: string,
     provider: ethers.JsonRpcProvider,
 ): Promise<ethers.Wallet> {
-    const snap = await db.collection('mint_bot_wallets').doc(walletId).get();
-    if (!snap.exists) throw new Error(`Wallet ${walletId} not found in Firestore.`);
+    const { data, error } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('id', walletId)
+        .single();
 
-    const data = snap.data() as MintBotWallet;
-    const privateKey = decryptPrivateKey(data.encryptedKey, data.iv, data.tag);
+    if (error || !data) throw new Error(`Wallet ${walletId} not found in Supabase.`);
+
+    const walletData = data as MintBotWallet;
+    const privateKey = decryptPrivateKey(walletData.encrypted_key, walletData.iv, walletData.tag);
 
     return new ethers.Wallet(privateKey, provider);
 }

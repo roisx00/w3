@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { supabase } from '@/lib/supabase';
 
-// GET /api/mint-bot/logs?jobId=xxx  — stream recent logs for a job
+// GET  /api/mint-bot/logs?jobId=xxx&userId=xxx
 export async function GET(req: NextRequest) {
-    return NextResponse.json({ error: 'Mint Bot is temporarily disabled for maintenance.' }, { status: 503 });
     const jobId = req.nextUrl.searchParams.get('jobId');
-    if (!jobId) return NextResponse.json({ error: 'jobId required' }, { status: 400 });
+    const userId = req.nextUrl.searchParams.get('userId');
 
-    if (!adminDb) return NextResponse.json({ error: 'Server not configured.' }, { status: 503 });
+    if (!jobId || !userId) {
+        return NextResponse.json({ error: 'jobId and userId required' }, { status: 400 });
+    }
 
-    const snap = await adminDb
-        .collection('mint_bot_logs')
-        .where('jobId', '==', jobId)
-        // .orderBy('timestamp', 'desc')
-        .limit(50)
-        .get();
+    const { data: logs, error } = await supabase
+        .from('bot_logs')
+        .select('*')
+        .eq('job_id', jobId)
+        .eq('firebase_user_id', userId)
+        .order('timestamp', { ascending: false })
+        .limit(100);
 
-    const logs = snap.docs
-        .map((d: QueryDocumentSnapshot) => ({ id: d.id, ...d.data() }))
-        .sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)); // Manual sort
+    if (error) {
+        console.error('[supabase-logs-error]', error);
+        return NextResponse.json({ error: 'Failed to fetch logs' }, { status: 500 });
+    }
 
     return NextResponse.json({ logs });
 }
