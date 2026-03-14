@@ -10,6 +10,19 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'jobId and userId required' }, { status: 400 });
     }
 
+    const { data: logs, error } = await supabase
+        .from('bot_logs')
+        .select('*')
+        .eq('job_id', jobId)
+        .eq('firebase_user_id', userId)
+        .order('timestamp', { ascending: false })
+        .limit(100);
+
+    if (error) {
+        console.error('[supabase-logs-error]', error);
+        return NextResponse.json({ error: 'Failed to fetch logs' }, { status: 500 });
+    }
+
     // Map snake_case to camelCase for frontend
     const mappedLogs = logs.map((l: any) => ({
         id: l.id,
