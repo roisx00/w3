@@ -19,7 +19,15 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to fetch wallets' }, { status: 500 });
     }
 
-    return NextResponse.json({ wallets });
+    // Map snake_case to camelCase for frontend
+    const mappedWallets = wallets.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        address: w.address,
+        createdAt: w.created_at
+    }));
+
+    return NextResponse.json({ wallets: mappedWallets });
 }
 
 // POST /api/mint-bot/wallets  — add a wallet

@@ -29,10 +29,28 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to fetch jobs' }, { status: 500 });
     }
 
-    // RPC URL is handled as non-secret for simplicity here, 
-    // but in original code it was stripped. Supabase doesn't easily mask fields on SELECT * without specifying all other fields.
-    // For now, we'll return all as intended by user's "Bot Worker reads from Supabase".
-    return NextResponse.json({ jobs });
+    // Map snake_case to camelCase for frontend
+    const mappedJobs = jobs.map((j: any) => ({
+        id: j.id,
+        userId: j.firebase_user_id,
+        walletId: j.wallet_id,
+        walletAddress: j.wallet_address,
+        contractAddress: j.contract_address,
+        chainId: j.chain_id,
+        rpcUrl: j.rpc_url,
+        mintFunction: j.mint_function,
+        mintAmount: j.mint_amount,
+        mintPrice: j.mint_price,
+        gasMultiplier: j.gas_multiplier,
+        maxRetries: j.max_retries,
+        status: j.status,
+        txHash: j.tx_hash,
+        error: j.error_message,
+        createdAt: j.created_at,
+        updatedAt: j.updated_at
+    }));
+
+    return NextResponse.json({ jobs: mappedJobs });
 }
 
 // POST /api/mint-bot/jobs
@@ -111,11 +129,27 @@ export async function POST(req: NextRequest) {
         .select()
         .single();
 
-    if (insertError) {
-        return NextResponse.json({ error: insertError.message }, { status: 500 });
-    }
+    const mappedJob = {
+        id: job.id,
+        userId: job.firebase_user_id,
+        walletId: job.wallet_id,
+        walletAddress: job.wallet_address,
+        contractAddress: job.contract_address,
+        chainId: job.chain_id,
+        rpcUrl: job.rpc_url,
+        mintFunction: job.mint_function,
+        mintAmount: job.mint_amount,
+        mintPrice: job.mint_price,
+        gasMultiplier: job.gas_multiplier,
+        maxRetries: job.max_retries,
+        status: job.status,
+        txHash: job.tx_hash,
+        error: job.error_message,
+        createdAt: job.created_at,
+        updatedAt: job.updated_at
+    };
 
-    return NextResponse.json({ job });
+    return NextResponse.json(mappedJob);
 }
 
 // PATCH /api/mint-bot/jobs?id=xxx
