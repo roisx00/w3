@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ArrowLeft, CheckCircle2, XCircle, User, Briefcase, Award, Plus, Trash2, Copy, Share2, Camera, Loader2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle2, XCircle, User, Briefcase, Award, Plus, Trash2, Copy, Share2, Camera, Loader2, Github, Globe, ExternalLink, Sparkles } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
 import { UserRole, Experience } from '@/lib/types';
 import AuthGuard from '@/components/auth/AuthGuard';
@@ -16,6 +16,7 @@ const STEPS = [
     { id: 'basic', title: 'Identity', icon: User },
     { id: 'roles', title: 'Expertise', icon: Award },
     { id: 'experience', title: 'History', icon: Briefcase },
+    { id: 'socials', title: 'Proofs', icon: Share2 },
 ];
 
 function OnboardingPage() {
@@ -37,6 +38,8 @@ function OnboardingContent() {
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [showBadgeModal, setShowBadgeModal] = useState(false);
     const [paymentLoading, setPaymentLoading] = useState(false);
+    const [fetchingGithub, setFetchingGithub] = useState(false);
+    const [githubError, setGithubError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         username: '',
         displayName: '',
@@ -48,6 +51,9 @@ function OnboardingContent() {
         skills: [] as string[],
         experience: [] as Experience[],
         photoUrl: '',
+        github: '',
+        portfolio: '',
+        githubStats: undefined as any,
     });
 
     useEffect(() => {
@@ -63,10 +69,38 @@ function OnboardingContent() {
                 skills: user.skills || [],
                 experience: user.experience || [],
                 photoUrl: user.photoUrl || '',
+                github: user.socials?.github || '',
+                portfolio: user.socials?.portfolio || '',
+                githubStats: user.githubStats,
             });
         }
     }, [user?.id]);
 
+
+    const fetchGithubStats = async () => {
+        if (!formData.github.trim()) return;
+        setFetchingGithub(true);
+        setGithubError(null);
+        try {
+            const res = await fetch(`https://api.github.com/users/${formData.github}`);
+            if (!res.ok) throw new Error('User not found');
+            const data = await res.json();
+            
+            setFormData(prev => ({
+                ...prev,
+                githubStats: {
+                    repos: data.public_repos || 0,
+                    followers: data.followers || 0,
+                    stars: 0, // Total stars is harder to get via public API without multiple calls
+                    verifiedAt: new Date().toISOString(),
+                }
+            }));
+        } catch (err) {
+            setGithubError('GitHub user not found or API limit reached');
+        } finally {
+            setFetchingGithub(false);
+        }
+    };
 
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -108,6 +142,10 @@ function OnboardingContent() {
             const incomplete = formData.experience.some(e => !e.projectName.trim() || !e.role.trim() || !e.duration.trim());
             if (incomplete) return ['Fill in Project, Role, and Duration for all entries'];
         }
+        if (currentStep === 3) {
+            // Step 3 is optional, no required fields
+            return [];
+        }
         return [];
     };
 
@@ -132,7 +170,10 @@ function OnboardingContent() {
             socials: {
                 ...(user?.socials || {}),
                 twitter: formData.twitter || undefined,
+                github: formData.github || undefined,
+                portfolio: formData.portfolio || undefined,
             },
+            githubStats: formData.githubStats,
             roles: formData.roles,
             skills: formData.skills,
             experience: formData.experience,
@@ -496,6 +537,103 @@ function OnboardingContent() {
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Step 3: Social Proofs */}
+                {currentStep === 3 && (
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="mb-8">
+                            <h2 className="font-display text-3xl font-extrabold mb-1">Social <span className="text-accent-primary">Proofs.</span></h2>
+                            <p className="text-foreground/40 text-sm">Verify your influence and link your portfolio. <span className="text-accent-primary/60 italic">(Optional)</span></p>
+                        </div>
+
+                        <div className="space-y-8">
+                            {/* GitHub Verification */}
+                            <div className="p-6 rounded-2xl border border-white/5 bg-white/5 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-accent-primary/5 rounded-full blur-[40px] -mr-16 -mt-16 group-hover:bg-accent-primary/10 transition-colors" />
+                                
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center border border-white/10">
+                                        <Github className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-sm">GitHub Verification</h3>
+                                        <p className="text-[10px] text-foreground/40 font-medium tracking-wide uppercase">Influence & Code Contributions</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <div className="relative flex-1">
+                                        <input 
+                                            type="text" 
+                                            value={formData.github}
+                                            onChange={e => setFormData({ ...formData, github: e.target.value.replace(/[^a-zA-Z0-9-]/g, '') })}
+                                            placeholder="GitHub Username"
+                                            className="w-full glass bg-white/5 border-white/10 px-5 py-3.5 focus:border-accent-primary/50 outline-none transition-colors text-sm font-medium rounded-xl"
+                                        />
+                                    </div>
+                                    <button 
+                                        type="button" 
+                                        onClick={fetchGithubStats}
+                                        disabled={fetchingGithub || !formData.github.trim()}
+                                        className="px-6 rounded-xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-white/90 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        {fetchingGithub ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                        {formData.githubStats ? 'Refresh' : 'Verify'}
+                                    </button>
+                                </div>
+
+                                {githubError && <p className="text-[10px] text-accent-danger font-bold mt-2 px-1">{githubError}</p>}
+
+                                {formData.githubStats && (
+                                    <div className="mt-6 flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
+                                        <div className="flex-1 p-3 bg-white/5 rounded-xl border border-white/5 text-center">
+                                            <p className="text-xl font-black text-white">{formData.githubStats.repos}</p>
+                                            <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest mt-0.5">Repos</p>
+                                        </div>
+                                        <div className="flex-1 p-3 bg-white/5 rounded-xl border border-white/5 text-center">
+                                            <p className="text-xl font-black text-accent-success">{formData.githubStats.followers}</p>
+                                            <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest mt-0.5">Followers</p>
+                                        </div>
+                                        <div className="w-10 h-10 rounded-full bg-accent-success/10 border border-accent-success/30 flex items-center justify-center">
+                                            <CheckCircle2 className="w-5 h-5 text-accent-success" />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Portfolio Link */}
+                            <div className="p-6 rounded-2xl border border-white/5 bg-white/5 group">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 rounded-xl bg-accent-secondary/10 flex items-center justify-center border border-accent-secondary/20">
+                                        <Globe className="w-6 h-6 text-accent-secondary" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-sm">Personal Portfolio</h3>
+                                        <p className="text-[10px] text-foreground/40 font-medium tracking-wide uppercase">Website or Case Studies</p>
+                                    </div>
+                                </div>
+
+                                <div className="relative">
+                                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/20" />
+                                    <input 
+                                        type="text" 
+                                        value={formData.portfolio}
+                                        onChange={e => setFormData({ ...formData, portfolio: e.target.value })}
+                                        placeholder="https://yourportfolio.com"
+                                        className="w-full glass bg-white/5 border-white/10 pl-12 pr-5 py-3.5 focus:border-accent-secondary/50 outline-none transition-colors text-sm font-medium rounded-xl"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-10 p-4 border border-accent-primary/20 bg-accent-primary/5 rounded-xl flex gap-3">
+                            <Sparkles className="w-4 h-4 text-accent-primary flex-shrink-0 mt-0.5" />
+                            <p className="text-[10px] text-foreground/60 leading-relaxed">
+                                <span className="font-bold text-accent-primary uppercase">Alpha Tip:</span> Verified proofs significantly increase your <span className="font-bold text-white">Resume Score</span> and catch the eye of top Founders looking for contributors.
+                            </p>
+                        </div>
                     </div>
                 )}
 

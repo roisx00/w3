@@ -18,8 +18,13 @@ export function computeProfileScore(p: Partial<TalentProfile>): number {
     score += skills >= 8 ? 10 : skills >= 4 ? 5 : 0;
     const exp = p.experience?.length ?? 0;
     score += Math.min(exp * 6, 18);                 // up to 3 exp × 6pts
-    // max possible: 6+10+5+6+5+10+12+10+18 = 82 → cap at 80
-    return Math.min(Math.round(score), 80);
+    
+    // Social Proofs (Optional)
+    if (p.githubStats) score += 8;                  // GitHub verified
+    if (p.socials?.portfolio?.trim()) score += 4;   // Portfolio linked
+
+    // max possible: 82 (base) + 12 (proofs) = 94 → cap at 90
+    return Math.min(Math.round(score), 90);
 }
 
 export const BADGE_FREE_LIMIT = 0;

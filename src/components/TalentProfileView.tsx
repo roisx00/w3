@@ -9,9 +9,11 @@ import {
     Send, Briefcase, Calendar, Award, ChevronLeft, CheckCircle2,
     Copy, Link as LinkIcon, ShieldCheck, MessageSquare, Share2, Zap,
     FileText, Download, Star, Code2, Users,
-    Sparkles, Clock, Eye, Bookmark
+    Sparkles, Clock, Eye, Bookmark, Github, Globe
 } from 'lucide-react';
 import Link from 'next/link';
+import StartConversationModal from '@/components/messaging/StartConversationModal';
+import { useRouter } from 'next/navigation';
 
 interface TalentProfileViewProps {
     talent: TalentProfile;
@@ -24,6 +26,8 @@ interface TalentProfileViewProps {
 export default function TalentProfileView({ talent, id, currentUser, savedResumes, toggleSaveResume }: TalentProfileViewProps) {
     const [copiedLink, setCopiedLink] = useState(false);
     const [copiedContact, setCopiedContact] = useState(false);
+    const [showDMModal, setShowDMModal] = useState(false);
+    const router = useRouter();
 
     const isSaved = savedResumes.includes(id);
     const isFounder = currentUser?.roles?.includes('Founder');
@@ -190,6 +194,46 @@ export default function TalentProfileView({ talent, id, currentUser, savedResume
                                             <Send className="w-4 h-4" />
                                         </a>
                                     )}
+                                    {talent.socials?.github && (
+                                        <a href={`https://github.com/${talent.socials.github.replace('@', '')}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                            className="p-2.5 glass-pill hover:bg-white/5 transition-colors text-foreground/50 hover:text-accent-primary border-white/5">
+                                            <Github className="w-4 h-4" />
+                                        </a>
+                                    )}
+                                    {talent.socials?.portfolio && (
+                                        <a href={talent.socials.portfolio.startsWith('http') ? talent.socials.portfolio : `https://${talent.socials.portfolio}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                            className="p-2.5 glass-pill hover:bg-white/5 transition-colors text-foreground/50 hover:text-accent-primary border-white/5">
+                                            <Globe className="w-4 h-4" />
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* GitHub Verified Stats */}
+                        {talent.githubStats && (
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 overflow-hidden relative group">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-accent-primary/5 rounded-full blur-[30px] -mr-12 -mt-12 group-hover:bg-accent-primary/10 transition-colors" />
+                                <div className="flex items-center justify-between mb-3 relative">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30 flex items-center gap-1.5">
+                                        <Github className="w-3 h-3 text-white" /> Verified GitHub
+                                    </p>
+                                    <div className="flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3 text-accent-success" />
+                                        <span className="text-[8px] font-bold text-accent-success uppercase tracking-widest">Live Proof</span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 relative">
+                                    <div className="bg-white/5 rounded-xl py-2 px-3 text-center border border-white/5">
+                                        <p className="text-lg font-black text-white">{talent.githubStats.repos}</p>
+                                        <p className="text-[8px] font-bold text-foreground/20 uppercase tracking-widest">Repos</p>
+                                    </div>
+                                    <div className="bg-white/5 rounded-xl py-2 px-3 text-center border border-white/5">
+                                        <p className="text-lg font-black text-accent-success">{talent.githubStats.followers}</p>
+                                        <p className="text-[8px] font-bold text-foreground/20 uppercase tracking-widest">Followers</p>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -227,6 +271,16 @@ export default function TalentProfileView({ talent, id, currentUser, savedResume
                                     <Download className="w-3.5 h-3.5" />
                                     Download Resume PDF
                                 </a>
+                            )}
+
+                            {isFounder && currentUser?.id !== id && (
+                                <button
+                                    onClick={() => setShowDMModal(true)}
+                                    className="flex items-center justify-center gap-2 w-full py-4 bg-white text-black font-black rounded-xl hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98] transition-all text-xs uppercase tracking-widest shadow-[0_8px_24px_rgba(255,255,255,0.1)]"
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                    Slide into DM
+                                </button>
                             )}
 
                             {isFounder && (
@@ -376,6 +430,13 @@ export default function TalentProfileView({ talent, id, currentUser, savedResume
                     <ReviewSection talentId={id} talentName={talent.displayName} profileScore={talent.profileScore ?? 0} />
                 </div>
             </div>
+            <StartConversationModal
+                isOpen={showDMModal}
+                onClose={() => setShowDMModal(false)}
+                recipient={talent}
+                currentUser={currentUser}
+                onSuccess={(convId) => router.push(`/dashboard/messages?id=${convId}`)}
+            />
         </div>
     );
 }

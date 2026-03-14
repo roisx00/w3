@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { checkBadgePromo } from '@/lib/promos';
 import { JobPosting, Airdrop, TalentProfile } from '@/lib/types';
-import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle, Bot, Users as UsersIcon, Eye, Bookmark } from 'lucide-react';
+import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle, Bot, Users as UsersIcon, Eye, Bookmark, MessageSquare } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import { PRICES } from '@/lib/payments';
 import Link from 'next/link';
@@ -23,7 +23,7 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-    const { user, bookmarkedJobs, trackedAirdrops, savedResumes, updateProfile, logReferralEarning, logout } = useAppContext();
+    const { user, bookmarkedJobs, trackedAirdrops, savedResumes, updateProfile, logReferralEarning, logout, unreadMessagesCount } = useAppContext();
     const [savedJobsData, setSavedJobsData] = useState<JobPosting[]>([]);
     const [trackedAirdropsData, setTrackedAirdropsData] = useState<Airdrop[]>([]);
     const [savedResumesData, setSavedResumesData] = useState<TalentProfile[]>([]);
@@ -231,6 +231,16 @@ function DashboardContent() {
                     <nav className="glass p-4 space-y-1">
                         <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl text-accent-primary font-bold text-sm">
                             <Award className="w-4 h-4" /> Overview
+                        </Link>
+                        <Link href="/dashboard/messages" className="flex items-center justify-between px-4 py-3 hover:bg-white/5 rounded-xl text-foreground/50 transition-colors font-bold text-sm group">
+                            <span className="flex items-center gap-3">
+                                <MessageSquare className="w-4 h-4" /> Messages
+                            </span>
+                            {unreadMessagesCount > 0 && (
+                                <span className="w-5 h-5 rounded-full bg-accent-primary flex items-center justify-center animate-in zoom-in duration-300">
+                                    <span className="text-[10px] font-black text-black">{unreadMessagesCount}</span>
+                                </span>
+                            )}
                         </Link>
                         <Link href={`/talents/${user?.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl text-foreground/50 transition-colors font-bold text-sm">
                             <Settings className="w-4 h-4" /> My Resume

@@ -18,7 +18,10 @@ import {
     setDoc,
     addDoc,
     collection,
-    serverTimestamp
+    serverTimestamp,
+    onSnapshot,
+    query,
+    where
 } from 'firebase/firestore';
 
 interface AppState {
@@ -37,6 +40,7 @@ interface AppState {
     toggleSaveResume: (talentId: string) => void;
     updateProfile: (profile: Partial<TalentProfile>) => void;
     logReferralEarning: (paymentType: string, amount: number, txHash: string, payer: TalentProfile) => Promise<void>;
+    unreadMessagesCount: number;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -48,6 +52,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [bookmarkedJobs, setBookmarkedJobs] = useState<string[]>([]);
     const [trackedAirdrops, setTrackedAirdrops] = useState<string[]>([]);
     const [savedResumes, setSavedResumes] = useState<string[]>([]);
+    const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
     // Monitor Auth State
     useEffect(() => {
@@ -124,6 +129,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         return () => unsubscribe();
     }, []);
+
+    // Monitor Unread Messages
+    useEffect(() => {
+        if (!user?.id) {
+            setUnreadMessagesCount(0);
+            return;
+        }
+
+        const q = query(
+            collection(db, 'conversations'),
+            where('participants', 'array-contains', user.id)
+        );
+
+        const unsubscribe = onSnapshot(q, (snap) => {
+            let total = 0;
+            snap.docs.forEach(doc => {
+                const data = doc.data();
+                total += (data.unreadCount?.[user.id] || 0);
+            });
+            setUnreadMessagesCount(total);
+        });
+
+        return () => unsubscribe();
+    }, [user?.id]);
 
     const login = async () => {
         try {
@@ -288,6 +317,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             toggleSaveResume,
             updateProfile,
             logReferralEarning,
+            unreadMessagesCount,
         }}>
             {children}
         </AppContext.Provider>

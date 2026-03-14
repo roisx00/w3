@@ -32,6 +32,14 @@ export interface TalentProfile {
         twitter?: string;
         discord?: string;
         telegram?: string;
+        github?: string;
+        portfolio?: string;
+    };
+    githubStats?: {
+        repos: number;
+        stars: number;
+        followers: number;
+        verifiedAt: string;
     };
     roles: UserRole[];
     skills: string[];
@@ -143,4 +151,26 @@ export interface PaymentRecord {
     refId?: string;
     refName?: string;
     createdAt?: any;
+}
+
+export interface Conversation {
+    id: string;
+    participants: string[];
+    participantDetails: {
+        [uid: string]: {
+            displayName: string;
+            photoUrl?: string;
+            username: string;
+        }
+    };
+    lastMessage?: string;
+    lastMessageAt?: any;
+    unreadCount: { [uid: string]: number };
+}
+
+export interface Message {
+    id: string;
+    senderId: string;
+    text: string;
+    createdAt: any;
 }

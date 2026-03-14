@@ -74,6 +74,12 @@ const TalentCard = ({ talent }: TalentCardProps) => {
                             {talent.views}
                         </div>
                     )}
+                    {talent.githubStats && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 border border-white/10 text-[9px] font-black uppercase tracking-widest text-white" title="Verified GitHub Stats">
+                            <Github className="w-2.5 h-2.5" />
+                            {talent.githubStats.followers}
+                        </div>
+                    )}
                     {isFounder && (
                         <button 
                             onClick={(e) => {
