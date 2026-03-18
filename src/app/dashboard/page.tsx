@@ -196,12 +196,13 @@ function DashboardContent() {
         setPaymentLoading(true);
         try {
             if (type === 'resume') {
-                await addDoc(collection(db, 'payments'), {
-                    userId: user.id, userEmail: user.email || '', userDisplayName: user.displayName || '',
-                    type: 'user_badge', amount: 0, txHash: 'promo-free', status: 'verified',
-                    note: 'First 50 launch promo', createdAt: serverTimestamp(),
+                const token = await getAccessToken();
+                const res = await fetch('/api/talents/grant-badge', {
+                    method: 'POST',
+                    headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
                 });
-                await updateDoc(doc(db, 'talents', user.id), { hasBadge: true, hasBadgePending: false, badgeTxHash: 'promo-free' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to claim badge');
                 updateProfile({ hasBadge: true, hasBadgePending: false, badgeTxHash: 'promo-free' } as any);
                 setBadgeSuccessType('resume');
             } else {
@@ -395,23 +396,29 @@ function DashboardContent() {
                         })()}
 
                         {/* Restore previous account (Firebase → Privy migration) */}
-                        {privyUser?.linkedAccounts?.some((a: any) => a.type === 'email') && (
-                            <div className="pt-2 border-t border-white/5">
-                                <button
-                                    onClick={handleMigrateData}
-                                    disabled={migrateLoading}
-                                    className="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-foreground/50 hover:border-accent-primary/30 hover:text-foreground/70 transition-colors disabled:opacity-50"
-                                >
-                                    <span className="flex items-center gap-2">
-                                        <RefreshCw className={`w-3.5 h-3.5 ${migrateLoading ? 'animate-spin' : ''}`} />
-                                        {migrateLoading ? 'Restoring...' : 'Restore Previous Account Data'}
-                                    </span>
-                                </button>
-                                {migrateResult && (
-                                    <p className="text-[10px] text-foreground/50 mt-1.5 px-1 leading-relaxed">{migrateResult}</p>
-                                )}
-                            </div>
-                        )}
+                        <div className="pt-2 border-t border-white/5">
+                            {privyUser?.linkedAccounts?.some((a: any) => a.type === 'email') ? (
+                                <>
+                                    <button
+                                        onClick={handleMigrateData}
+                                        disabled={migrateLoading}
+                                        className="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-foreground/50 hover:border-accent-primary/30 hover:text-foreground/70 transition-colors disabled:opacity-50"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <RefreshCw className={`w-3.5 h-3.5 ${migrateLoading ? 'animate-spin' : ''}`} />
+                                            {migrateLoading ? 'Restoring...' : 'Restore Previous Account Data'}
+                                        </span>
+                                    </button>
+                                    {migrateResult && (
+                                        <p className="text-[10px] text-foreground/50 mt-1.5 px-1 leading-relaxed">{migrateResult}</p>
+                                    )}
+                                </>
+                            ) : (
+                                <p className="text-[10px] text-foreground/40 px-1 leading-relaxed">
+                                    Had an account before? Add your old email above (Add Email Backup) then a &quot;Restore Previous Account Data&quot; button will appear.
+                                </p>
+                            )}
+                        </div>
 
                         {/* Wallet */}
                         {(() => {

@@ -9,7 +9,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
     collection, getDocs, deleteDoc, doc, updateDoc, query, orderBy, addDoc, serverTimestamp
 } from 'firebase/firestore';
-import { JobPosting, Airdrop, TalentProfile, PaymentRecord } from '@/lib/types';
+import { JobPosting, Airdrop, TalentProfile, PaymentRecord, KOLProfile } from '@/lib/types';
 import {
     LayoutDashboard,
     Briefcase,
@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { PAYMENT_LABELS, BASE_EXPLORER_TX } from '@/lib/payments';
 
-type Tab = 'jobs' | 'airdrops' | 'users' | 'payments' | 'proposals';
+type Tab = 'jobs' | 'airdrops' | 'users' | 'kols' | 'payments' | 'proposals';
 
 export default function AdminDashboard() {
     const { user, isLoggedIn, authLoading } = useAppContext();
@@ -51,6 +51,7 @@ export default function AdminDashboard() {
     const [jobs, setJobs] = useState<JobPosting[]>([]);
     const [airdrops, setAirdrops] = useState<Airdrop[]>([]);
     const [talents, setTalents] = useState<TalentProfile[]>([]);
+    const [kols, setKols] = useState<KOLProfile[]>([]);
     const [payments, setPayments] = useState<PaymentRecord[]>([]);
     const [proposals, setProposals] = useState<any[]>([]);
     const [showAirdropForm, setShowAirdropForm] = useState(false);
@@ -86,11 +87,12 @@ export default function AdminDashboard() {
         setLoading(true);
         setError(null);
         try {
-            const [jobsSnap, airdropsSnap, paymentsSnap, proposalsSnap] = await Promise.all([
+            const [jobsSnap, airdropsSnap, paymentsSnap, proposalsSnap, kolsSnap] = await Promise.all([
                 getDocs(query(collection(db, 'jobs'), orderBy('createdAt', 'desc'))),
                 getDocs(query(collection(db, 'airdrops'), orderBy('createdAt', 'desc'))),
                 getDocs(query(collection(db, 'payments'), orderBy('createdAt', 'desc'))),
                 getDocs(query(collection(db, 'kol_proposals'), orderBy('createdAt', 'desc'))),
+                getDocs(collection(db, 'kols')),
             ]);
             // talents may not have updatedAt on all docs — fallback to unordered
             let talentsSnap;
@@ -103,6 +105,7 @@ export default function AdminDashboard() {
             setJobs(jobsSnap.docs.map(d => ({ id: d.id, ...d.data() } as JobPosting)));
             setAirdrops(airdropsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Airdrop)));
             setTalents(talentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as TalentProfile)));
+            setKols(kolsSnap.docs.map(d => ({ id: d.id, ...d.data() } as KOLProfile)));
             setPayments(paymentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PaymentRecord)));
             setProposals(proposalsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         } catch (err: any) {
@@ -236,37 +239,16 @@ export default function AdminDashboard() {
                 targetId = match.id;
             }
 
-            if (manualBadgeType === 'resume') {
-                await updateDoc(doc(db, 'talents', targetId), { hasBadge: true, hasBadgePending: false });
-                await addDoc(collection(db, 'payments'), {
-                    userId: targetId,
-                    userEmail: talents.find(t => t.id === targetId)?.email || '',
-                    userDisplayName: talents.find(t => t.id === targetId)?.displayName || '',
-                    type: 'user_badge',
-                    amount: 0,
-                    txHash: manualBadgeTx.trim() || 'admin-grant',
-                    status: 'verified',
-                    note: 'Manually granted by admin',
-                    createdAt: serverTimestamp(),
-                });
-            } else {
-                const adminToken = await getAccessToken();
-                await fetch('/api/kols/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {}) },
-                    body: JSON.stringify({ userId: targetId, data: { hasBadge: true, badgeTxHash: manualBadgeTx.trim() || 'admin-grant' } }),
-                });
-                await addDoc(collection(db, 'payments'), {
-                    userId: targetId,
-                    userEmail: talents.find(t => t.id === targetId)?.email || '',
-                    userDisplayName: talents.find(t => t.id === targetId)?.displayName || '',
-                    type: 'kol_badge',
-                    amount: 0,
-                    txHash: manualBadgeTx.trim() || 'admin-grant',
-                    status: 'verified',
-                    note: 'Manually granted by admin',
-                    createdAt: serverTimestamp(),
-                });
+            const adminToken = await getAccessToken();
+            const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {}) };
+            const grantRes = await fetch('/api/admin/grant-badge', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ targetId, type: manualBadgeType, txHash: manualBadgeTx.trim() || 'admin-grant' }),
+            });
+            if (!grantRes.ok) {
+                const errData = await grantRes.json();
+                throw new Error(errData.error || 'Grant failed');
             }
 
             alert(`${manualBadgeType === 'resume' ? 'Resume' : 'KOL'} Badge granted to ${targetId}`);
@@ -295,6 +277,11 @@ export default function AdminDashboard() {
         t.displayName?.toLowerCase().includes(search.toLowerCase()) ||
         t.username?.toLowerCase().includes(search.toLowerCase()) ||
         t.roles?.some(r => r.toLowerCase().includes(search.toLowerCase()))
+    );
+    const filteredKols = kols.filter(k =>
+        !search ||
+        k.displayName?.toLowerCase().includes(search.toLowerCase()) ||
+        k.username?.toLowerCase().includes(search.toLowerCase())
     );
     const filteredPayments = payments.filter(p =>
         !search ||
@@ -421,7 +408,8 @@ export default function AdminDashboard() {
     const activeCount = activeTab === 'jobs' ? filteredJobs.length
         : activeTab === 'airdrops' ? filteredAirdrops.length
             : activeTab === 'users' ? filteredTalents.length
-                : filteredPayments.length;
+                : activeTab === 'kols' ? filteredKols.length
+                    : filteredPayments.length;
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-12">
@@ -464,6 +452,12 @@ export default function AdminDashboard() {
                         className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'bg-foreground text-background' : 'hover:bg-white/5'}`}
                     >
                         Users ({talents.length})
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('kols'); setSearch(''); }}
+                        className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'kols' ? 'bg-foreground text-background' : 'hover:bg-white/5'}`}
+                    >
+                        KOLs ({kols.length})
                     </button>
                     <button
                         onClick={() => { setActiveTab('proposals'); setSearch(''); }}
@@ -1019,6 +1013,53 @@ export default function AdminDashboard() {
                     </div>
                 )}
             </div>}
+
+            {/* KOLS TAB */}
+            {activeTab === 'kols' && (
+                <div className="space-y-3">
+                    {filteredKols.length === 0 ? (
+                        <div className="glass rounded-2xl py-20 text-center">
+                            <p className="text-foreground/20 font-bold uppercase tracking-widest">No KOL profiles yet</p>
+                        </div>
+                    ) : filteredKols.map(kol => (
+                        <div key={kol.id} className="glass p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 overflow-hidden flex-shrink-0 flex items-center justify-center font-black text-red-400">
+                                {kol.photoUrl ? <img src={kol.photoUrl} className="w-full h-full object-cover" alt="" /> : (kol.displayName || 'K').charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                                    <span className="font-black text-sm">{kol.displayName}</span>
+                                    <span className="text-[10px] text-foreground/40">@{kol.username}</span>
+                                    {kol.hasBadge && <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">BADGED</span>}
+                                    {kol.verified && <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">VERIFIED</span>}
+                                    {kol.kolBoosted && <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">BOOSTED</span>}
+                                </div>
+                                <div className="flex flex-wrap gap-3 text-[10px] text-foreground/40">
+                                    <span>{kol.niches?.join(', ') || 'No niches'}</span>
+                                    {kol.totalReach ? <span>{kol.totalReach >= 1000000 ? `${(kol.totalReach/1000000).toFixed(1)}M` : `${Math.round(kol.totalReach/1000)}K`} reach</span> : null}
+                                    <span className="font-mono text-[9px] text-foreground/20">{kol.id}</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-2 flex-shrink-0">
+                                <button
+                                    onClick={async () => {
+                                        const token = await getAccessToken();
+                                        const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+                                        await fetch('/api/kols/save', { method: 'POST', headers, body: JSON.stringify({ userId: kol.id, data: { verified: !kol.verified } }) });
+                                        fetchData();
+                                    }}
+                                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${kol.verified ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20' : 'bg-white/5 border-white/10 text-foreground/40 hover:border-emerald-500/30'}`}
+                                >
+                                    {kol.verified ? 'Verified' : 'Verify'}
+                                </button>
+                                <a href={`/kols/${kol.id}`} target="_blank" className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 text-foreground/40 hover:border-white/20 transition-all">
+                                    View
+                                </a>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* PROPOSALS TAB */}
             {activeTab === 'proposals' && (
