@@ -9,7 +9,7 @@ const MIGRATE_FIELDS = [
     'savedResumes', 'referredBy', 'referralCode',
 ];
 
-async function verifyPrivyToken(token: string): Promise<{ did: string; email?: string } | null> {
+async function verifyPrivyToken(token: string): Promise<{ did: string; email?: string; twitterUsername?: string } | null> {
     const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
     if (!appId || !token) return null;
     try {
@@ -19,10 +19,52 @@ async function verifyPrivyToken(token: string): Promise<{ did: string; email?: s
         if (!res.ok) return null;
         const privyUser = await res.json();
         const emailAccount = privyUser.linked_accounts?.find((a: any) => a.type === 'email');
-        return { did: privyUser.id, email: emailAccount?.address };
+        const twitterAccount = privyUser.linked_accounts?.find((a: any) => a.type === 'twitter_oauth');
+        return {
+            did: privyUser.id,
+            email: emailAccount?.address,
+            twitterUsername: twitterAccount?.username,
+        };
     } catch {
         return null;
     }
+}
+
+async function findOldDoc(did: string, email?: string, twitterUsername?: string, manualUid?: string) {
+    const candidates: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+
+    // 1. Manual UID lookup — most precise
+    if (manualUid && manualUid !== did) {
+        const snap = await adminDb.collection('talents').doc(manualUid).get();
+        if (snap.exists) candidates.push(snap as any);
+    }
+
+    // 2. Email match
+    if (email && candidates.length === 0) {
+        const snap = await adminDb.collection('talents').where('email', '==', email).limit(5).get();
+        snap.docs.filter(d => d.id !== did && !d.data().migrated).forEach(d => candidates.push(d));
+    }
+
+    // 3. Twitter username match (handles @username and username formats)
+    if (twitterUsername && candidates.length === 0) {
+        const handle = twitterUsername.replace('@', '').toLowerCase();
+        const [snap1, snap2] = await Promise.all([
+            adminDb.collection('talents').where('socials.twitter', '==', `@${handle}`).limit(3).get(),
+            adminDb.collection('talents').where('socials.twitter', '==', handle).limit(3).get(),
+        ]);
+        [...snap1.docs, ...snap2.docs]
+            .filter(d => d.id !== did && !d.data().migrated)
+            .forEach(d => { if (!candidates.find(c => c.id === d.id)) candidates.push(d); });
+    }
+
+    // 4. Username field match
+    if (twitterUsername && candidates.length === 0) {
+        const handle = twitterUsername.replace('@', '').toLowerCase();
+        const snap = await adminDb.collection('talents').where('username', '==', handle).limit(3).get();
+        snap.docs.filter(d => d.id !== did && !d.data().migrated).forEach(d => candidates.push(d));
+    }
+
+    return candidates;
 }
 
 export async function POST(req: NextRequest) {
@@ -33,26 +75,32 @@ export async function POST(req: NextRequest) {
     const privyData = await verifyPrivyToken(token);
     if (!privyData) return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
 
-    const { did, email } = privyData;
-    if (!email) {
-        return NextResponse.json({ error: 'No verified email linked to your account. Link your email in Account Settings first.' }, { status: 400 });
+    const { did, email, twitterUsername } = privyData;
+    const body = await req.json().catch(() => ({}));
+    const manualUid = body.manualUid?.trim() || undefined;
+
+    if (!email && !twitterUsername && !manualUid) {
+        return NextResponse.json({
+            error: 'No email or Twitter linked to your account. Link your email in Account Settings, or enter your old UID manually.',
+        }, { status: 400 });
     }
 
     try {
-        // Find old doc by email (could be Firebase Auth era doc)
-        const oldSnap = await adminDb.collection('talents')
-            .where('email', '==', email)
-            .limit(5)
-            .get();
+        const candidates = await findOldDoc(did, email, twitterUsername, manualUid);
 
-        // Filter out the current user's own doc
-        const oldDocs = oldSnap.docs.filter(d => d.id !== did);
-        if (oldDocs.length === 0) {
-            return NextResponse.json({ found: false, message: 'No previous account found with that email.' });
+        if (candidates.length === 0) {
+            return NextResponse.json({
+                found: false,
+                message: `No previous account found. Searched by: ${[
+                    email && `email (${email})`,
+                    twitterUsername && `Twitter (@${twitterUsername})`,
+                    manualUid && `UID (${manualUid})`,
+                ].filter(Boolean).join(', ')}`,
+            });
         }
 
-        // Pick the most complete doc (most fields filled)
-        const bestOldDoc = oldDocs.sort((a, b) => Object.keys(b.data()).length - Object.keys(a.data()).length)[0];
+        // Pick most complete doc
+        const bestOldDoc = candidates.sort((a, b) => Object.keys(b.data()).length - Object.keys(a.data()).length)[0];
         const oldData = bestOldDoc.data();
 
         // Get current doc
@@ -73,12 +121,10 @@ export async function POST(req: NextRequest) {
         }
 
         if (Object.keys(merged).length === 0) {
-            return NextResponse.json({ found: true, merged: 0, message: 'Your current profile already has all data — nothing to restore.' });
+            return NextResponse.json({ found: true, merged: 0, message: 'Your current profile already has all the data from the old account.' });
         }
 
-        // Write merged fields into current (Privy) doc
         await currentRef.set(merged, { merge: true });
-        // Mark old doc as migrated so it won't be matched again
         await bestOldDoc.ref.set({ migrated: did, migratedAt: new Date() }, { merge: true });
 
         return NextResponse.json({ found: true, merged: Object.keys(merged).length, fields: Object.keys(merged) });

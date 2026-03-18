@@ -46,6 +46,7 @@ function DashboardContent() {
     const [promoLoaded, setPromoLoaded] = useState(false);
     const [migrateLoading, setMigrateLoading] = useState(false);
     const [migrateResult, setMigrateResult] = useState<string | null>(null);
+    const [migrateUid, setMigrateUid] = useState('');
 
     const referralLink = user?.id
         ? `${typeof window !== 'undefined' ? window.location.origin : 'https://w3hub.space'}?ref=${user.id}`
@@ -257,17 +258,18 @@ function DashboardContent() {
             const token = await getAccessToken();
             const res = await fetch('/api/migrate-data', {
                 method: 'POST',
-                headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+                headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+                body: JSON.stringify({ manualUid: migrateUid.trim() || undefined }),
             });
             const data = await res.json();
             if (!res.ok) {
                 setMigrateResult(data.error || 'Migration failed.');
             } else if (!data.found) {
-                setMigrateResult('No previous account found with your email.');
+                setMigrateResult(data.message || 'No previous account found. Try entering your old Firebase UID below.');
             } else if (data.merged === 0) {
-                setMigrateResult('Your profile already has all your previous data.');
+                setMigrateResult(data.message || 'Your profile already has all your previous data.');
             } else {
-                setMigrateResult(`Restored ${data.merged} field(s): ${data.fields?.join(', ')}. Refresh to see updates.`);
+                setMigrateResult(`✓ Restored ${data.merged} field(s): ${data.fields?.join(', ')}. Reload the page to see updates.`);
             }
         } catch {
             setMigrateResult('Something went wrong. Try again.');
@@ -397,28 +399,29 @@ function DashboardContent() {
                         })()}
 
                         {/* Restore previous account (Firebase → Privy migration) */}
-                        <div className="pt-2 border-t border-white/5">
-                            {privyUser?.linkedAccounts?.some((a: any) => a.type === 'email') ? (
-                                <>
-                                    <button
-                                        onClick={handleMigrateData}
-                                        disabled={migrateLoading}
-                                        className="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-foreground/50 hover:border-accent-primary/30 hover:text-foreground/70 transition-colors disabled:opacity-50"
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <RefreshCw className={`w-3.5 h-3.5 ${migrateLoading ? 'animate-spin' : ''}`} />
-                                            {migrateLoading ? 'Restoring...' : 'Restore Previous Account Data'}
-                                        </span>
-                                    </button>
-                                    {migrateResult && (
-                                        <p className="text-[10px] text-foreground/50 mt-1.5 px-1 leading-relaxed">{migrateResult}</p>
-                                    )}
-                                </>
-                            ) : (
-                                <p className="text-[10px] text-foreground/40 px-1 leading-relaxed">
-                                    Had an account before? Add your old email above (Add Email Backup) then a &quot;Restore Previous Account Data&quot; button will appear.
-                                </p>
+                        <div className="pt-2 border-t border-white/5 space-y-2">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30 px-1">Restore Old Account</p>
+                            <button
+                                onClick={handleMigrateData}
+                                disabled={migrateLoading}
+                                className="w-full flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-foreground/50 hover:border-accent-primary/30 hover:text-foreground/70 transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${migrateLoading ? 'animate-spin' : ''}`} />
+                                {migrateLoading ? 'Searching...' : 'Restore Previous Account Data'}
+                            </button>
+                            <input
+                                type="text"
+                                value={migrateUid}
+                                onChange={e => setMigrateUid(e.target.value)}
+                                placeholder="Old Firebase UID (optional fallback)"
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono text-foreground/40 outline-none focus:border-accent-primary/30 placeholder:text-foreground/20"
+                            />
+                            {migrateResult && (
+                                <p className={`text-[10px] px-1 leading-relaxed ${migrateResult.startsWith('✓') ? 'text-accent-success' : 'text-foreground/50'}`}>{migrateResult}</p>
                             )}
+                            <p className="text-[10px] text-foreground/20 px-1 leading-relaxed">
+                                Auto-searches by your linked email + X handle. Enter old UID only if not found.
+                            </p>
                         </div>
 
                         {/* Wallet */}
