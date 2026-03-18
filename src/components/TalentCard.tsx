@@ -7,6 +7,7 @@ import Link from 'next/link';
 import GoldBadge from '@/components/GoldBadge';
 import FounderBadge from '@/components/FounderBadge';
 import { useAppContext } from '@/context/AppContext';
+import { computeTalentW3Score, getW3Tier } from '@/lib/w3score';
 
 interface TalentCardProps {
     talent: TalentProfile;
@@ -18,6 +19,8 @@ const TalentCard = ({ talent }: TalentCardProps) => {
 
     const isFounder = user?.roles?.includes('Founder');
     const isSaved = savedResumes.includes(talent.id!);
+    const w3Score = computeTalentW3Score(talent);
+    const tier = getW3Tier(w3Score);
 
     const handleCopyWallet = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -97,20 +100,21 @@ const TalentCard = ({ talent }: TalentCardProps) => {
                             <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
                         </button>
                     )}
-                    {(() => {
-                        const displayScore = talent.reputationScore ?? talent.profileScore ?? 0;
-                        if (displayScore <= 0) return null;
-                        return (
-                            <div className={`text-center px-2 py-1 rounded-lg border text-[10px] font-black ${
-                                displayScore >= 85 ? 'bg-accent-success/10 border-accent-success/30 text-accent-success' :
-                                displayScore >= 70 ? 'bg-accent-primary/10 border-accent-primary/30 text-accent-primary' :
-                                displayScore >= 50 ? 'bg-accent-warning/10 border-accent-warning/30 text-accent-warning' :
-                                'bg-accent-danger/10 border-accent-danger/30 text-accent-danger'
-                            }`}>
-                                {displayScore}/100
+                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-xl border ${tier.bg} ${tier.border}`}
+                        style={tier.glow ? { boxShadow: tier.glow } : {}}>
+                        <div className="leading-none">
+                            <p className={`text-[7px] font-black uppercase tracking-widest opacity-60 ${tier.color}`}>W3</p>
+                            <div className="flex items-baseline gap-0.5">
+                                <span className={`text-sm font-black leading-none ${tier.color}`}>{w3Score}</span>
+                                <span className="text-[7px] text-foreground/25 font-bold">/1k</span>
                             </div>
-                        );
-                    })()}
+                            <p className={`text-[7px] font-black uppercase tracking-widest opacity-70 ${tier.color}`}>{tier.label}</p>
+                        </div>
+                        <div className="w-8 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${tier.color}`}
+                                style={{ width: `${w3Score / 10}%`, background: 'currentColor' }} />
+                        </div>
+                    </div>
                     <Link
                         href={`/talents/${talent.id}`}
                         className="p-2 glass hover:bg-white/10 rounded-lg transition-colors group/link"

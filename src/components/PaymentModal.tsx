@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Copy, Check, X, Wallet, AlertCircle, ExternalLink, Loader2, ShieldCheck, ShieldX, Sparkles, PartyPopper } from 'lucide-react';
-import { PAYMENT_WALLET, BASE_CHAIN_NAME, BASE_EXPLORER_TX } from '@/lib/payments';
+import { useState, useEffect } from 'react';
+import { X, Wallet, Loader2, ShieldCheck, ShieldX, Sparkles, PartyPopper, AlertCircle } from 'lucide-react';
+import { PAYMENT_WALLET, BASE_CHAIN_ID, BASE_USDC_CONTRACT } from '@/lib/payments';
+import { useWallets } from '@privy-io/react-auth';
+import { ethers } from 'ethers';
 import GoldBadge from './GoldBadge';
 
 interface PaymentModalProps {
@@ -14,77 +16,125 @@ interface PaymentModalProps {
     loading?: boolean;
 }
 
-type VerifyState = 'idle' | 'verifying' | 'verified' | 'failed' | 'celebrating';
+type PayState = 'idle' | 'switching' | 'sending' | 'verifying' | 'confirmed' | 'celebrating' | 'failed';
+type Currency = 'USDC' | 'ETH';
+
+const USDC_ABI = ['function transfer(address to, uint256 amount) returns (bool)'];
 
 export default function PaymentModal({ isOpen, onClose, onConfirm, amount, description, loading }: PaymentModalProps) {
-    const [txHash, setTxHash] = useState('');
-    const [copied, setCopied] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [verifyState, setVerifyState] = useState<VerifyState>('idle');
-    const [verifyError, setVerifyError] = useState('');
+    const { wallets } = useWallets();
+    const [payState, setPayState] = useState<PayState>('idle');
+    const [error, setError] = useState('');
+    const [currency, setCurrency] = useState<Currency>('USDC');
+    const [ethPrice, setEthPrice] = useState<number>(0);
+    const ethAmount = ethPrice > 0 ? (amount / ethPrice) : 0;
+
+    const embeddedWallet = wallets.find((w: any) => w.walletClientType === 'privy');
+
+    useEffect(() => {
+        if (!isOpen) return;
+        // Binance public API — real-time, no key needed
+        fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT')
+            .then(r => r.json())
+            .then(d => { if (d?.price) setEthPrice(parseFloat(d.price)); })
+            .catch(() => {
+                // Fallback: Coinbase
+                fetch('https://api.coinbase.com/v2/prices/ETH-USD/spot')
+                    .then(r => r.json())
+                    .then(d => { if (d?.data?.amount) setEthPrice(parseFloat(d.data.amount)); })
+                    .catch(() => {});
+            });
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
-    const isValidHash = /^0x[a-fA-F0-9]{64}$/.test(txHash.trim());
-
-    const copyAddress = async () => {
-        await navigator.clipboard.writeText(PAYMENT_WALLET);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const handleClose = () => {
+        if (payState === 'sending' || payState === 'verifying' || payState === 'confirmed') return;
+        setPayState('idle');
+        setError('');
+        onClose();
     };
 
-    const handleSubmit = async () => {
-        if (!isValidHash) return;
-        setSubmitting(true);
-        setVerifyState('verifying');
-        setVerifyError('');
+    const handlePay = async () => {
+        if (!embeddedWallet) {
+            setError('No embedded wallet found. Please refresh and try again.');
+            return;
+        }
+
+        setError('');
+        setPayState('switching');
 
         try {
-            // Step 1: Verify on-chain via BaseScan
-            const res = await fetch('/api/verify-payment', {
+            await embeddedWallet.switchChain(BASE_CHAIN_ID);
+            setPayState('sending');
+
+            const provider = await embeddedWallet.getEthereumProvider();
+            const ethersProvider = new ethers.BrowserProvider(provider);
+            const signer = await ethersProvider.getSigner();
+
+            let tx: any;
+
+            if (currency === 'ETH') {
+                tx = await signer.sendTransaction({
+                    to: PAYMENT_WALLET,
+                    value: ethers.parseEther(ethAmount.toFixed(18)),
+                });
+            } else {
+                const usdc = new ethers.Contract(BASE_USDC_CONTRACT, USDC_ABI, signer);
+                const amountUnits = ethers.parseUnits(amount.toString(), 6);
+                tx = await usdc.transfer(PAYMENT_WALLET, amountUnits);
+            }
+
+            setPayState('verifying');
+
+            const verifyRes = await fetch('/api/verify-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ txHash: txHash.trim(), expectedAmount: amount }),
+                body: JSON.stringify({ txHash: tx.hash, expectedAmount: currency === 'ETH' ? ethAmount : amount, currency }),
             });
-            const data = await res.json();
+            const verifyData = await verifyRes.json();
 
-            if (!data.valid) {
-                setVerifyState('failed');
-                setVerifyError(data.error || 'Verification failed. Please check your transaction.');
+            if (!verifyData.valid) {
+                setPayState('failed');
+                setError(verifyData.error || 'On-chain verification failed. Please contact support with your tx hash.');
                 return;
             }
 
-            // Step 2: Chain verified — activate the perk
-            setVerifyState('verified');
-            await onConfirm(txHash.trim());
-            
-            // Step 3: Show celebration!
-            setVerifyState('celebrating');
-            setTxHash('');
-        } catch {
-            setVerifyState('failed');
-            setVerifyError('Network error. Please try again.');
-        } finally {
-            setSubmitting(false);
+            setPayState('confirmed');
+            await onConfirm(tx.hash);
+            setPayState('celebrating');
+
+        } catch (e: any) {
+            setPayState('failed');
+            const msg = e?.message || '';
+            if (msg.includes('insufficient')) {
+                setError(`Insufficient ${currency} balance on Base Mainnet.`);
+            } else if (msg.includes('rejected') || msg.includes('denied')) {
+                setError('Transaction rejected.');
+            } else {
+                setError(msg.slice(0, 100) || 'Transaction failed. Please try again.');
+            }
         }
     };
 
-    const handleClose = () => {
-        if (verifyState === 'verified' || verifyState === 'celebrating') return; // don't close mid-activation/celebration
-        setVerifyState('idle');
-        setVerifyError('');
-        setTxHash('');
-        onClose();
+    const payLabel = currency === 'USDC' ? `Pay $${amount} USDC` : `Pay ${ethAmount > 0 ? ethAmount.toFixed(5) : '...'} ETH`;
+    const stateLabel: Record<PayState, string> = {
+        idle: payLabel,
+        switching: 'Switching to Base...',
+        sending: 'Confirm in wallet...',
+        verifying: 'Confirming on-chain...',
+        confirmed: 'Activating...',
+        celebrating: 'Done!',
+        failed: `Retry — ${payLabel}`,
     };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={handleClose} />
             <div className="relative glass max-w-md w-full p-8 rounded-3xl border border-white/20 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                
-                {verifyState === 'celebrating' ? (
+
+                {payState === 'celebrating' ? (
                     <div className="flex flex-col items-center text-center space-y-8 py-4">
-                        {/* Animated Badge Container */}
                         <div className="relative">
                             <div className="absolute inset-0 bg-accent-primary/20 blur-[60px] animate-pulse rounded-full" />
                             <div className="relative bg-gradient-to-tr from-accent-primary/20 to-accent-success/20 p-6 rounded-full border border-white/10 shadow-2xl animate-in zoom-in-50 duration-700 delay-100">
@@ -97,23 +147,21 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                                 </div>
                             </div>
                         </div>
-
                         <div className="space-y-4 animate-in slide-in-from-bottom-10 duration-700 delay-300">
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent-primary mb-2">Verified</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-accent-primary mb-2">Payment Confirmed</p>
                                 <h1 className="text-3xl font-black uppercase tracking-tighter leading-none">
-                                    Successfully <br /> 
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-primary to-accent-success">Verified</span>
+                                    Successfully <br />
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-primary to-accent-success">Activated</span>
                                 </h1>
                             </div>
                             <p className="text-sm font-bold text-foreground/40 max-w-[280px] mx-auto">
                                 YOU ARE SUCCESSFULLY VERIFIED ON W3HUB
                             </p>
                         </div>
-
                         <div className="w-full pt-4 animate-in fade-in duration-700 delay-500">
                             <button
-                                onClick={() => { setVerifyState('idle'); onClose(); }}
+                                onClick={() => { setPayState('idle'); onClose(); }}
                                 className="w-full py-4 bg-foreground text-background font-black text-xs uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-black/20"
                             >
                                 Enter The Hub
@@ -125,7 +173,7 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                         {/* Header */}
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-primary mb-1">Payment Required</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-primary mb-1">One-Click Payment</p>
                                 <h2 className="text-xl font-black uppercase">{description}</h2>
                             </div>
                             <button onClick={handleClose} className="p-2 text-foreground/20 hover:text-foreground transition-colors">
@@ -133,113 +181,124 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                             </button>
                         </div>
 
-                        {/* Amount */}
-                        <div className="text-center py-4 bg-accent-success/5 border border-accent-success/20 rounded-2xl">
-                            <p className="text-5xl font-black text-accent-success">${amount}</p>
-                            <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mt-1">USDC on Base Mainnet</p>
-                        </div>
-
-                        {/* Send To */}
-                        <div className="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/10">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 flex items-center gap-2">
-                                <Wallet className="w-3 h-3" /> Send USDC to this address
-                            </p>
-                            <div className="flex items-center gap-2">
-                                <code className="flex-1 text-[11px] font-mono text-accent-primary bg-accent-primary/5 px-3 py-2 rounded-lg break-all">
-                                    {PAYMENT_WALLET}
-                                </code>
+                        {/* Currency Toggle */}
+                        <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
+                            {(['USDC', 'ETH'] as Currency[]).map(c => (
                                 <button
-                                    onClick={copyAddress}
-                                    className="p-2.5 bg-accent-primary/10 text-accent-primary rounded-lg hover:bg-accent-primary/20 transition-colors shrink-0"
+                                    key={c}
+                                    onClick={() => { setCurrency(c); setError(''); setPayState('idle'); }}
+                                    className={`flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${
+                                        currency === c
+                                            ? 'bg-accent-primary text-white shadow-lg'
+                                            : 'text-foreground/40 hover:text-foreground/70'
+                                    }`}
                                 >
-                                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                    {c}
                                 </button>
+                            ))}
+                        </div>
+
+                        {/* Amount */}
+                        <div className="text-center py-6 bg-accent-success/5 border border-accent-success/20 rounded-2xl">
+                            {currency === 'USDC' ? (
+                                <>
+                                    <p className="text-5xl font-black text-accent-success">${amount}</p>
+                                    <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mt-1">USDC on Base Mainnet</p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-5xl font-black text-accent-success">
+                                        {ethAmount > 0 ? ethAmount.toFixed(6) : '...'}
+                                    </p>
+                                    <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mt-1">
+                                        ETH on Base · ≈ ${amount} USD
+                                        {ethPrice > 0 && <span className="ml-1">(1 ETH = ${ethPrice.toLocaleString()})</span>}
+                                    </p>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Wallet info */}
+                        <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
+                            <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                                <Wallet className="w-4 h-4 text-emerald-400" />
                             </div>
-                            <p className="text-[10px] text-foreground/30 font-medium">
-                                Network: <span className="text-foreground/50 font-bold">{BASE_CHAIN_NAME}</span> &nbsp;•&nbsp; Token: <span className="text-foreground/50 font-bold">USDC</span>
-                            </p>
-                        </div>
-
-                        {/* TX Hash */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-widest text-foreground/40">
-                                Transaction Hash (after sending)
-                            </label>
-                            <input
-                                type="text"
-                                value={txHash}
-                                onChange={e => { setTxHash(e.target.value); setVerifyState('idle'); setVerifyError(''); }}
-                                placeholder="0x..."
-                                disabled={submitting || verifyState === 'verified'}
-                                className="w-full glass bg-white/5 border-white/10 px-4 py-3 rounded-xl focus:border-accent-success/50 outline-none transition-all font-mono text-xs disabled:opacity-50"
-                            />
-                            {isValidHash && verifyState === 'idle' && (
-                                <a
-                                    href={`${BASE_EXPLORER_TX}${txHash}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1 text-[10px] text-accent-primary hover:underline"
-                                >
-                                    <ExternalLink className="w-3 h-3" /> View on BaseScan
-                                </a>
-                            )}
-
-                            {/* Verification status */}
-                            {verifyState === 'verifying' && (
-                                <div className="flex items-center gap-2 text-[11px] font-bold text-accent-primary">
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    Verifying on Base chain...
-                                </div>
-                            )}
-                            {verifyState === 'verified' && (
-                                <div className="flex items-center gap-2 text-[11px] font-bold text-accent-success">
-                                    <ShieldCheck className="w-3.5 h-3.5" />
-                                    Verified on-chain — activating your perk...
-                                </div>
-                            )}
-                            {verifyState === 'failed' && (
-                                <div className="flex items-start gap-2 text-[11px] font-bold text-accent-danger mt-1">
-                                    <ShieldX className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                                    {verifyError}
-                                </div>
-                            )}
-
-                            {verifyState === 'idle' && (
-                                <p className="text-[10px] text-foreground/30 font-medium flex items-center gap-1.5">
-                                    <ShieldCheck className="w-3 h-3 text-accent-success/50" />
-                                    Auto-verified instantly on Base — no waiting.
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30">Paying from</p>
+                                <p className="text-xs font-mono text-foreground/70">
+                                    {embeddedWallet?.address
+                                        ? `${embeddedWallet.address.slice(0, 8)}...${embeddedWallet.address.slice(-6)}`
+                                        : 'Embedded Wallet'}
                                 </p>
-                            )}
+                            </div>
+                            <div className="ml-auto flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                <span className="text-[10px] font-bold text-emerald-400">Base</span>
+                            </div>
                         </div>
 
-                        {/* Warning */}
-                        <div className="flex items-start gap-3 bg-accent-warning/5 border border-accent-warning/20 p-3 rounded-xl">
-                            <AlertCircle className="w-4 h-4 text-accent-warning shrink-0 mt-0.5" />
-                            <p className="text-[10px] text-foreground/50 leading-relaxed">
-                                Only send USDC on <strong className="text-foreground/70">Base Mainnet</strong>. Payments on other chains will not be credited.
-                            </p>
-                        </div>
+                        {/* Status */}
+                        {payState !== 'idle' && payState !== 'failed' && (
+                            <div className="flex items-center gap-2 p-3 bg-accent-primary/5 border border-accent-primary/20 rounded-xl">
+                                <Loader2 className="w-4 h-4 text-accent-primary animate-spin flex-shrink-0" />
+                                <div>
+                                    <p className="text-xs font-bold text-accent-primary">{stateLabel[payState]}</p>
+                                    {payState === 'sending' && (
+                                        <p className="text-[10px] text-foreground/30 mt-0.5">Approve the transaction in your wallet popup</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {payState === 'confirmed' && (
+                            <div className="flex items-center gap-2 text-[11px] font-bold text-accent-success">
+                                <ShieldCheck className="w-4 h-4" />
+                                On-chain confirmed — activating your perk...
+                            </div>
+                        )}
+
+                        {/* Error */}
+                        {payState === 'failed' && error && (
+                            <div className="flex items-start gap-2 p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
+                                <ShieldX className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                                <p className="text-[11px] text-red-400 font-bold">{error}</p>
+                            </div>
+                        )}
+
+                        {/* No wallet warning */}
+                        {!embeddedWallet && (
+                            <div className="flex items-start gap-3 bg-accent-warning/5 border border-accent-warning/20 p-3 rounded-xl">
+                                <AlertCircle className="w-4 h-4 text-accent-warning shrink-0 mt-0.5" />
+                                <p className="text-[10px] text-foreground/50 leading-relaxed">
+                                    No embedded wallet detected. Please sign out and sign back in with X to generate your wallet.
+                                </p>
+                            </div>
+                        )}
 
                         {/* Actions */}
                         <div className="flex gap-3 pt-2">
                             <button
                                 onClick={handleClose}
-                                disabled={verifyState === 'verified'}
+                                disabled={payState === 'sending' || payState === 'verifying' || payState === 'confirmed'}
                                 className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-foreground/30 hover:text-foreground transition-colors disabled:opacity-30"
                             >
                                 Cancel
                             </button>
                             <button
-                                onClick={handleSubmit}
-                                disabled={!isValidHash || submitting || !!loading || verifyState === 'verified' || verifyState === 'verifying'}
+                                onClick={handlePay}
+                                disabled={!embeddedWallet || !!loading || ['switching', 'sending', 'verifying', 'confirmed', 'celebrating'].includes(payState)}
                                 className="flex-1 py-3 bg-accent-success text-background font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
                             >
-                                {verifyState === 'verifying' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                {verifyState === 'verified' ? 'Activating...' :
-                                    verifyState === 'verifying' ? 'Verifying...' :
-                                        'Confirm Payment'}
+                                {['switching', 'sending', 'verifying', 'confirmed'].includes(payState) && (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                )}
+                                {stateLabel[payState]}
                             </button>
                         </div>
+
+                        <p className="text-center text-[10px] text-foreground/20 font-bold uppercase tracking-widest">
+                            Sent directly from your W3Hub wallet · Base Mainnet · {currency}
+                        </p>
                     </div>
                 )}
             </div>

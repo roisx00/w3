@@ -27,13 +27,20 @@ export function computeProfileScore(p: Partial<TalentProfile>): number {
     return Math.min(Math.round(score), 90);
 }
 
-export const BADGE_FREE_LIMIT = 0;
+export const BADGE_FREE_LIMIT = 50;
+export const KOL_BADGE_FREE_LIMIT = 50;
 export const JOB_FREE_LIMIT = 50;
 
 export async function checkBadgePromo(): Promise<{ isFree: boolean; remaining: number }> {
     const snap = await getCountFromServer(query(collection(db, 'talents'), where('hasBadge', '==', true)));
     const count = snap.data().count;
     return { isFree: count < BADGE_FREE_LIMIT, remaining: Math.max(0, BADGE_FREE_LIMIT - count) };
+}
+
+export async function checkKolBadgePromo(): Promise<{ isFree: boolean; remaining: number }> {
+    const snap = await getCountFromServer(query(collection(db, 'kols'), where('hasBadge', '==', true)));
+    const count = snap.data().count;
+    return { isFree: count < KOL_BADGE_FREE_LIMIT, remaining: Math.max(0, KOL_BADGE_FREE_LIMIT - count) };
 }
 
 export async function checkJobPromo(): Promise<{ isFree: boolean; remaining: number }> {

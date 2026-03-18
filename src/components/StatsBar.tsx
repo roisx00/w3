@@ -43,7 +43,8 @@ function StatItem({ label, value }: { label: string; value: number }) {
 
 export default function StatsBar() {
     const [stats, setStats] = useState<Stat[]>([
-        { label: 'Talent Profiles', value: 0 },
+        { label: 'Web3 Resumes', value: 0 },
+        { label: 'KOL Profiles', value: 0 },
         { label: 'Projects Hiring', value: 0 },
         { label: 'Airdrops Listed', value: 0 },
     ]);
@@ -52,13 +53,15 @@ export default function StatsBar() {
     useEffect(() => {
         async function fetchCounts() {
             try {
-                const [talentsSnap, jobsSnap, airdropsSnap] = await Promise.all([
+                const [talentsSnap, kolsSnap, jobsSnap, airdropsSnap] = await Promise.all([
                     getCountFromServer(collection(db, 'talents')),
+                    getCountFromServer(collection(db, 'kols')),
                     getCountFromServer(query(collection(db, 'jobs'), where('paymentStatus', '!=', 'pending'))),
                     getCountFromServer(query(collection(db, 'airdrops'), where('paymentStatus', '!=', 'pending'))),
                 ]);
                 setStats([
-                    { label: 'Talent Profiles', value: talentsSnap.data().count },
+                    { label: 'Web3 Resumes', value: talentsSnap.data().count },
+                    { label: 'KOL Profiles', value: kolsSnap.data().count },
                     { label: 'Projects Hiring', value: jobsSnap.data().count },
                     { label: 'Airdrops Listed', value: airdropsSnap.data().count },
                 ]);

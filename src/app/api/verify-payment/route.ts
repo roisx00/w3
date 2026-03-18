@@ -13,8 +13,13 @@ function hexToUSDC(hex: string): number {
     return parseInt(hex, 16) / 1_000_000;
 }
 
+function hexToETH(hex: string): number {
+    // ETH has 18 decimals
+    return parseInt(hex, 16) / 1e18;
+}
+
 export async function POST(req: NextRequest) {
-    const { txHash, expectedAmount } = await req.json();
+    const { txHash, expectedAmount, currency = 'USDC' } = await req.json();
 
     if (!txHash || !expectedAmount) {
         return NextResponse.json({ valid: false, error: 'Missing txHash or expectedAmount' }, { status: 400 });
@@ -74,7 +79,40 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ valid: false, error: 'Transaction failed on-chain.' });
         }
 
-        // Find a USDC Transfer log where `to` = our payment wallet
+        if (currency === 'ETH') {
+            // Native ETH transfer — fetch the transaction itself to check value + to
+            const txRes = await fetch(rpcUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'eth_getTransactionByHash',
+                    params: [txHash],
+                    id: 2,
+                }),
+                cache: 'no-store',
+            });
+            const txData = await txRes.json();
+            const tx = txData.result;
+
+            if (!tx) return NextResponse.json({ valid: false, error: 'Transaction not found.' });
+
+            if (tx.to?.toLowerCase() !== PAYMENT_WALLET.toLowerCase()) {
+                return NextResponse.json({ valid: false, error: `ETH not sent to our wallet. Expected ${PAYMENT_WALLET}.` });
+            }
+
+            const ethSent = hexToETH(tx.value);
+            if (ethSent < expectedAmount * 0.995) { // 0.5% tolerance for rounding
+                return NextResponse.json({
+                    valid: false,
+                    error: `Insufficient ETH. Expected ~${expectedAmount.toFixed(6)} ETH but found ${ethSent.toFixed(6)} ETH.`,
+                });
+            }
+
+            return NextResponse.json({ valid: true, amount: ethSent, currency: 'ETH' });
+        }
+
+        // USDC: Find Transfer log where `to` = our payment wallet
         const transferLog = receipt.logs?.find((log: { address: string; topics: string[]; data: string }) =>
             log.address?.toLowerCase() === BASE_USDC_CONTRACT.toLowerCase() &&
             log.topics?.[0]?.toLowerCase() === TRANSFER_TOPIC &&
@@ -98,7 +136,7 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        return NextResponse.json({ valid: true, amount });
+        return NextResponse.json({ valid: true, amount, currency: 'USDC' });
     } catch (e: any) {
         console.error('Payment verification error:', e);
         return NextResponse.json({ 

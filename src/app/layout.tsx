@@ -1,10 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { AppProvider } from "@/context/AppContext";
+import PrivyClientProvider from "@/components/PrivyClientProvider";
 import { Suspense } from "react";
 import ReferralCapture from "@/components/ReferralCapture";
+import PromoBanner from "@/components/PromoBanner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -16,14 +18,28 @@ const outfit = Outfit({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#00f2ff',
+};
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://web3hub.vercel.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://w3hub.space'),
   title: {
     template: '%s | Web3 Hub',
     default: 'Web3 Hub | Discover Talents, Jobs & Airdrops',
   },
   description: "The elite decentralized workforce platform. Connect with top Web3 projects, showcase your technical expertise, and discover verified early airdrop opportunities.",
   keywords: ["Web3", "Blockchain", "Crypto Jobs", "Airdrops", "Smart Contracts", "DeFi", "Talent Hub"],
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'W3 Hub',
+  },
   openGraph: {
     title: 'Web3 Hub | Accelerating the Decentralized Future',
     description: 'Connect with top Web3 projects and discover early airdrop opportunities.',
@@ -48,11 +64,13 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${outfit.variable} font-sans antialiased bg-background text-foreground`}
       >
+        <PrivyClientProvider>
         <AppProvider>
           <Suspense fallback={null}>
             <ReferralCapture />
           </Suspense>
           <Navbar />
+          <PromoBanner />
           <main className="pt-24 min-h-screen">
             {children}
           </main>
@@ -73,17 +91,18 @@ export default function RootLayout({
                 <a href="/talents" className="hover:text-foreground/60 transition-colors">Talents</a>
                 <a href="/jobs" className="hover:text-foreground/60 transition-colors">Jobs</a>
                 <a href="/airdrops" className="hover:text-foreground/60 transition-colors">Airdrops</a>
-                <a href="https://x.com/w3hubdotspace" target="_blank" rel="noopener noreferrer"
+                <a href="https://x.com/internxbt" target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1.5 hover:text-foreground/60 transition-colors">
                   <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.847L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
                   </svg>
-                  @w3hubdotspace
+                  @internxbt
                 </a>
               </div>
             </div>
           </footer>
         </AppProvider>
+        </PrivyClientProvider>
       </body>
     </html>
   );

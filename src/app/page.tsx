@@ -2,6 +2,7 @@ import { Briefcase, Sparkles, Users, ArrowUpRight, MessageCircle, Wallet, FileTe
 import Link from 'next/link';
 import StatsBar from '@/components/StatsBar';
 import HomeCTA from '@/components/HomeCTA';
+import KOLHubPreview from '@/components/KOLHubPreview';
 
 export default function Home() {
   return (
@@ -22,12 +23,12 @@ export default function Home() {
               <div className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">The Future of Web3 Recruitment</span>
             </div>
-            <a href="https://x.com/w3hubdotspace" target="_blank" rel="noopener noreferrer"
+            <a href="https://x.com/internxbt" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 glass-pill px-4 py-2 border-white/5 hover:border-accent-primary/30 transition-colors">
               <svg className="w-3 h-3 text-foreground/50" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.847L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
               </svg>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">@w3hubdotspace</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">@internxbt</span>
             </a>
           </div>
 
@@ -59,15 +60,18 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-6 py-24 border-t border-white/5 space-y-6">
         <div className="text-center mb-16">
           <p className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground/30 mb-3">What We Offer</p>
-          <h2 className="font-display font-black text-4xl md:text-5xl uppercase tracking-tight">Three pillars. <span className="text-accent-primary">One ecosystem.</span></h2>
+          <h2 className="font-display font-black text-4xl md:text-5xl uppercase tracking-tight">Four pillars. <span className="text-accent-primary">One ecosystem.</span></h2>
         </div>
 
-        {/* Pillar 1 — Resumes */}
+        {/* Pillar 1 — KOL Hub */}
+        <KOLHubPreview />
+
+        {/* Pillar 2 — Resumes */}
         <Link href="/dashboard" className="group block glass p-8 md:p-10 hover:border-accent-primary/40 transition-all relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/5 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-accent-primary/10 transition-colors" />
           <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-8">
             <div className="shrink-0">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-primary/50 mb-2">01</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-primary/50 mb-2">02</div>
               <div className="w-16 h-16 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Users className="w-8 h-8 text-accent-primary" />
               </div>
@@ -77,7 +81,7 @@ export default function Home() {
                 <h3 className="font-display font-black text-3xl uppercase tracking-tight">Resumes</h3>
                 <ArrowUpRight className="w-5 h-5 text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <p className="text-foreground/50 text-base mb-5 max-w-xl">Build your Web3 resume once — share it everywhere. Your proof of work, on-chain history, and skills in one shareable link.</p>
+              <p className="text-foreground/50 text-base mb-5 max-w-xl">Build your Web3 resume once and share it everywhere. Your proof of work, on-chain history, and skills in one shareable link.</p>
               <div className="flex flex-wrap gap-2">
                 {['Discord Moderation', 'Community Manager', 'Solidity Dev', 'Marketing', 'Ambassador', 'Designer', 'Researcher', 'Project Manager'].map(skill => (
                   <span key={skill} className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg bg-accent-primary/10 border border-accent-primary/20 text-accent-primary/70">{skill}</span>
@@ -87,12 +91,12 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* Pillar 2 — Airdrops */}
+        {/* Pillar 3 — Airdrops */}
         <Link href="/airdrops" className="group block glass p-8 md:p-10 hover:border-accent-success/40 transition-all relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent-success/5 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-accent-success/10 transition-colors" />
           <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-8">
             <div className="shrink-0">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-success/50 mb-2">02</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-success/50 mb-2">03</div>
               <div className="w-16 h-16 rounded-2xl bg-accent-success/10 border border-accent-success/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Sparkles className="w-8 h-8 text-accent-success" />
               </div>
@@ -102,7 +106,7 @@ export default function Home() {
                 <h3 className="font-display font-black text-3xl uppercase tracking-tight">Airdrops</h3>
                 <ArrowUpRight className="w-5 h-5 text-accent-success opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <p className="text-foreground/50 text-base mb-5 max-w-xl">Discover new airdrops early. Curated alpha — testnet campaigns, confirmed token rewards, and points programs — before everyone else finds out.</p>
+              <p className="text-foreground/50 text-base mb-5 max-w-xl">Discover new airdrops early. Curated alpha with testnet campaigns, confirmed token rewards, and points programs before everyone else finds out.</p>
               <div className="flex flex-wrap gap-2">
                 {['Testnet Tasks', 'Points Programs', 'Token Rewards', 'Early Access', 'NFT Mints', 'DeFi Protocols'].map(tag => (
                   <span key={tag} className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg bg-accent-success/10 border border-accent-success/20 text-accent-success/70">{tag}</span>
@@ -112,12 +116,12 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* Pillar 3 — Careers */}
+        {/* Pillar 4 — Careers */}
         <Link href="/jobs" className="group block glass p-8 md:p-10 hover:border-accent-secondary/40 transition-all relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent-secondary/5 rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-accent-secondary/10 transition-colors" />
           <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-8">
             <div className="shrink-0">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-secondary/50 mb-2">03</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-secondary/50 mb-2">04</div>
               <div className="w-16 h-16 rounded-2xl bg-accent-secondary/10 border border-accent-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Briefcase className="w-8 h-8 text-accent-secondary" />
               </div>
@@ -127,7 +131,7 @@ export default function Home() {
                 <h3 className="font-display font-black text-3xl uppercase tracking-tight">Careers</h3>
                 <ArrowUpRight className="w-5 h-5 text-accent-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <p className="text-foreground/50 text-base mb-5 max-w-xl">Projects post jobs. Talent gets hired directly — no middlemen, no recruiters. Apply on-chain, get paid in crypto.</p>
+              <p className="text-foreground/50 text-base mb-5 max-w-xl">Projects post jobs. Talent gets hired directly with no middlemen and no recruiters. Apply on-chain, get paid in crypto.</p>
               <div className="flex flex-wrap gap-2">
                 {['Full-time', 'Part-time', 'Freelance', 'Paid in USDC', 'Remote', 'Token Comp', 'Entry Level', 'Senior'].map(tag => (
                   <span key={tag} className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg bg-accent-secondary/10 border border-accent-secondary/20 text-accent-secondary/70">{tag}</span>

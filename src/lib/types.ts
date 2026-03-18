@@ -153,6 +153,75 @@ export interface PaymentRecord {
     createdAt?: any;
 }
 
+export type KOLNiche =
+    | 'DeFi'
+    | 'NFTs'
+    | 'Gaming'
+    | 'Layer 2'
+    | 'AI x Crypto'
+    | 'Memes'
+    | 'Infrastructure'
+    | 'DAOs'
+    | 'Trading'
+    | 'Education';
+
+export type ContentType =
+    | 'Threads'
+    | 'Reviews'
+    | 'Tutorials'
+    | 'AMAs'
+    | 'Alpha Calls'
+    | 'Spaces'
+    | 'Shorts'
+    | 'YouTube Videos'
+    | 'Newsletters';
+
+export interface KOLCampaign {
+    id: string;
+    projectName: string;
+    type: string;         // e.g. "Twitter Thread", "YouTube Review"
+    result?: string;      // e.g. "500K impressions", "2x token price"
+    year?: string;
+    proofUrl?: string;
+}
+
+export interface KOLProfile {
+    id: string;                     // Privy DID
+    username: string;
+    displayName: string;
+    bio: string;
+    tagline?: string;               // Short headline, e.g. "DeFi Alpha Caller · 200K+ reach"
+    photoUrl?: string;
+    walletAddress?: string;
+    niches: KOLNiche[];
+    contentTypes: ContentType[];
+    languages: string[];
+    platforms: {
+        twitter?: { handle: string; followers: number; engagementRate?: number };
+        youtube?: { handle: string; subscribers: number };
+        telegram?: { handle: string; members: number };
+        tiktok?: { handle: string; followers: number };
+        discord?: { handle: string; members: number };
+        instagram?: { handle: string; followers: number };
+    };
+    totalReach?: number;            // auto-computed sum
+    campaigns: KOLCampaign[];
+    minBudget?: number;             // min USD per campaign
+    openToCollabs: boolean;
+    verified?: boolean;             // admin verified
+    kolBoosted?: boolean;
+    kolBoostExpiry?: string;
+    hasBadge?: boolean;             // paid $5 KOL badge
+    hasBadgePending?: boolean;
+    badgeTxHash?: string;
+    profileScore?: number;
+    reputationScore?: number;
+    reviewCount?: number;
+    createdAt?: any;
+    updatedAt?: any;
+    views?: number;
+}
+
 export interface Conversation {
     id: string;
     participants: string[];

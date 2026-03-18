@@ -1,4 +1,4 @@
-import { Briefcase, Sparkles, BadgeCheck, Rocket, TrendingUp, Check, Wallet } from 'lucide-react';
+import { Briefcase, Sparkles, BadgeCheck, Rocket, TrendingUp, Check, Wallet, Megaphone } from 'lucide-react';
 import { PRICES, BASE_CHAIN_NAME, PAYMENT_WALLET } from '@/lib/payments';
 import Link from 'next/link';
 
@@ -110,6 +110,46 @@ const plans = [
         ],
         cta: 'Submit Airdrop',
         href: '/airdrops/submit',
+    },
+    {
+        icon: Megaphone,
+        iconCls: 'bg-amber-500/10 border-amber-500/20',
+        iconTextCls: 'text-amber-400',
+        priceCls: 'text-amber-400',
+        checkCls: 'text-amber-400',
+        btnCls: 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
+        title: 'KOL Verified Badge',
+        subtitle: 'For KOLs',
+        price: PRICES.KOL_BADGE,
+        period: 'one-time',
+        features: [
+            'Verified KOL badge on your profile',
+            'Pinned above unverified KOLs',
+            'Projects trust & find you faster',
+            'On-chain proof of verification',
+        ],
+        cta: 'Get KOL Badge',
+        href: '/kols/register',
+    },
+    {
+        icon: Rocket,
+        iconCls: 'bg-purple-500/10 border-purple-500/20',
+        iconTextCls: 'text-purple-400',
+        priceCls: 'text-purple-400',
+        checkCls: 'text-purple-400',
+        btnCls: 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20',
+        title: 'KOL Profile Boost',
+        subtitle: 'For KOLs',
+        price: PRICES.KOL_BOOST_MONTHLY,
+        period: '/month',
+        features: [
+            'Pinned to top of KOL Hub',
+            'Featured label on your profile',
+            '30-day rolling subscription',
+            'Maximum exposure to projects',
+        ],
+        cta: 'Boost KOL Profile',
+        href: '/kols/register',
     },
 ];
 

@@ -15,6 +15,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '**.googleusercontent.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'pbs.twimg.com', // Twitter/X profile images
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com', // KOL demo avatars
+      },
     ],
   },
 };

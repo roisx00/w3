@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
+import { usePrivy } from '@privy-io/react-auth';
 import { db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
@@ -29,14 +30,18 @@ import {
     X,
     ImagePlus,
     List,
-    Loader2
+    Loader2,
+    Zap,
+    FileText,
+    Send
 } from 'lucide-react';
 import { PAYMENT_LABELS, BASE_EXPLORER_TX } from '@/lib/payments';
 
-type Tab = 'jobs' | 'airdrops' | 'users' | 'payments';
+type Tab = 'jobs' | 'airdrops' | 'users' | 'payments' | 'proposals';
 
 export default function AdminDashboard() {
     const { user, isLoggedIn, authLoading } = useAppContext();
+    const { getAccessToken } = usePrivy();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<Tab>('payments');
     const [loading, setLoading] = useState(true);
@@ -47,6 +52,7 @@ export default function AdminDashboard() {
     const [airdrops, setAirdrops] = useState<Airdrop[]>([]);
     const [talents, setTalents] = useState<TalentProfile[]>([]);
     const [payments, setPayments] = useState<PaymentRecord[]>([]);
+    const [proposals, setProposals] = useState<any[]>([]);
     const [showAirdropForm, setShowAirdropForm] = useState(false);
     const [airdropFormSubmitting, setAirdropFormSubmitting] = useState(false);
     const [uploadingAdminLogo, setUploadingAdminLogo] = useState(false);
@@ -80,10 +86,11 @@ export default function AdminDashboard() {
         setLoading(true);
         setError(null);
         try {
-            const [jobsSnap, airdropsSnap, paymentsSnap] = await Promise.all([
+            const [jobsSnap, airdropsSnap, paymentsSnap, proposalsSnap] = await Promise.all([
                 getDocs(query(collection(db, 'jobs'), orderBy('createdAt', 'desc'))),
                 getDocs(query(collection(db, 'airdrops'), orderBy('createdAt', 'desc'))),
                 getDocs(query(collection(db, 'payments'), orderBy('createdAt', 'desc'))),
+                getDocs(query(collection(db, 'kol_proposals'), orderBy('createdAt', 'desc'))),
             ]);
             // talents may not have updatedAt on all docs — fallback to unordered
             let talentsSnap;
@@ -97,6 +104,7 @@ export default function AdminDashboard() {
             setAirdrops(airdropsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Airdrop)));
             setTalents(talentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as TalentProfile)));
             setPayments(paymentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PaymentRecord)));
+            setProposals(proposalsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         } catch (err: any) {
             console.error("Error fetching admin data:", err);
             setError(err.message || "Failed to fetch data. Check your Firestore permissions and indexes.");
@@ -138,6 +146,8 @@ export default function AdminDashboard() {
     };
 
     const handleVerifyPayment = async (payment: PaymentRecord) => {
+        const token = await getAccessToken();
+        const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
         try {
             switch (payment.type) {
                 case 'job_post':
@@ -174,6 +184,23 @@ export default function AdminDashboard() {
                     }
                     break;
                 }
+                case 'kol_badge':
+                    await fetch('/api/kols/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...authHeaders },
+                        body: JSON.stringify({ userId: payment.userId, data: { hasBadge: true, badgeTxHash: payment.txHash || '' } }),
+                    });
+                    break;
+                case 'kol_boost': {
+                    const expiry = new Date();
+                    expiry.setDate(expiry.getDate() + 30);
+                    await fetch('/api/kols/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...authHeaders },
+                        body: JSON.stringify({ userId: payment.userId, data: { kolBoosted: true, kolBoostExpiry: expiry.toISOString() } }),
+                    });
+                    break;
+                }
             }
             await updateDoc(doc(db, 'payments', payment.id), { status: 'verified' });
             fetchData();
@@ -195,34 +222,54 @@ export default function AdminDashboard() {
     const [manualBadgeInput, setManualBadgeInput] = useState('');
     const [manualBadgeTx, setManualBadgeTx] = useState('');
     const [manualBadgeLoading, setManualBadgeLoading] = useState(false);
+    const [manualBadgeType, setManualBadgeType] = useState<'resume' | 'kol'>('resume');
 
     const handleManualBadgeGrant = async () => {
         const input = manualBadgeInput.trim();
         if (!input) { alert('Enter a user ID or email.'); return; }
         setManualBadgeLoading(true);
         try {
-            // Find user by ID directly, or by matching email in talents list
             let targetId = input;
             if (!input.startsWith('0x') && input.includes('@')) {
                 const match = talents.find(t => t.email?.toLowerCase() === input.toLowerCase());
                 if (!match) { alert('No user found with that email. Try their UID instead.'); setManualBadgeLoading(false); return; }
                 targetId = match.id;
             }
-            await updateDoc(doc(db, 'talents', targetId), { hasBadge: true, hasBadgePending: false });
-            if (manualBadgeTx.trim()) {
+
+            if (manualBadgeType === 'resume') {
+                await updateDoc(doc(db, 'talents', targetId), { hasBadge: true, hasBadgePending: false });
                 await addDoc(collection(db, 'payments'), {
                     userId: targetId,
                     userEmail: talents.find(t => t.id === targetId)?.email || '',
                     userDisplayName: talents.find(t => t.id === targetId)?.displayName || '',
                     type: 'user_badge',
-                    amount: 2,
-                    txHash: manualBadgeTx.trim(),
+                    amount: 0,
+                    txHash: manualBadgeTx.trim() || 'admin-grant',
+                    status: 'verified',
+                    note: 'Manually granted by admin',
+                    createdAt: serverTimestamp(),
+                });
+            } else {
+                const adminToken = await getAccessToken();
+                await fetch('/api/kols/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {}) },
+                    body: JSON.stringify({ userId: targetId, data: { hasBadge: true, badgeTxHash: manualBadgeTx.trim() || 'admin-grant' } }),
+                });
+                await addDoc(collection(db, 'payments'), {
+                    userId: targetId,
+                    userEmail: talents.find(t => t.id === targetId)?.email || '',
+                    userDisplayName: talents.find(t => t.id === targetId)?.displayName || '',
+                    type: 'kol_badge',
+                    amount: 0,
+                    txHash: manualBadgeTx.trim() || 'admin-grant',
                     status: 'verified',
                     note: 'Manually granted by admin',
                     createdAt: serverTimestamp(),
                 });
             }
-            alert(`Badge granted to ${targetId}`);
+
+            alert(`${manualBadgeType === 'resume' ? 'Resume' : 'KOL'} Badge granted to ${targetId}`);
             setManualBadgeInput('');
             setManualBadgeTx('');
             fetchData();
@@ -349,7 +396,7 @@ export default function AdminDashboard() {
         </div>
     );
 
-    if (!user?.isAdmin && user?.id !== '8QlMg7xGGrWeJKW6WnEUF5OQUb53' && user?.email !== 'roisx00@gmail.com') {
+    if (!user?.isAdmin && user?.id !== process.env.NEXT_PUBLIC_ADMIN_UID && user?.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
         return (
             <div className="min-h-screen flex items-center justify-center p-6 text-center">
                 <div className="max-w-md space-y-6 bg-white/5 p-12 rounded-[2rem] border border-white/10 shadow-2xl">
@@ -417,6 +464,18 @@ export default function AdminDashboard() {
                         className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'bg-foreground text-background' : 'hover:bg-white/5'}`}
                     >
                         Users ({talents.length})
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('proposals'); setSearch(''); }}
+                        className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'proposals' ? 'bg-foreground text-background' : 'hover:bg-white/5'}`}
+                    >
+                        <Zap className="w-3.5 h-3.5 text-yellow-400" />
+                        Proposals
+                        {proposals.filter(p => p.status === 'new').length > 0 && (
+                            <span className="w-5 h-5 rounded-full bg-yellow-400 text-background text-[9px] font-black flex items-center justify-center">
+                                {proposals.filter(p => p.status === 'new').length}
+                            </span>
+                        )}
                     </button>
                 </div>
             </header>
@@ -615,7 +674,7 @@ export default function AdminDashboard() {
                 />
             </div>
 
-            <div className="glass overflow-hidden border-white/10">
+            {activeTab !== 'proposals' && <div className="glass overflow-hidden border-white/10">
                 <table className="w-full text-left border-collapse">
                     <thead className="bg-white/5 border-b border-white/10">
                         <tr>
@@ -832,8 +891,19 @@ export default function AdminDashboard() {
                                 <td colSpan={4} className="px-6 pt-6 pb-2">
                                     <div className="bg-accent-warning/5 border border-accent-warning/20 rounded-2xl p-5 space-y-3">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-accent-warning flex items-center gap-2">
-                                            <ShieldCheck className="w-3.5 h-3.5" /> Manual Badge Grant — for payments received without auto-verification
+                                            <ShieldCheck className="w-3.5 h-3.5" /> Manual Badge Grant
                                         </p>
+                                        {/* Badge type toggle */}
+                                        <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10 w-fit">
+                                            <button onClick={() => setManualBadgeType('resume')}
+                                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${manualBadgeType === 'resume' ? 'bg-amber-500 text-white' : 'text-foreground/40 hover:text-foreground/70'}`}>
+                                                Resume Badge
+                                            </button>
+                                            <button onClick={() => setManualBadgeType('kol')}
+                                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${manualBadgeType === 'kol' ? 'bg-purple-500 text-white' : 'text-foreground/40 hover:text-foreground/70'}`}>
+                                                KOL Badge
+                                            </button>
+                                        </div>
                                         <div className="flex flex-col sm:flex-row gap-2">
                                             <input
                                                 type="text"
@@ -852,14 +922,14 @@ export default function AdminDashboard() {
                                             <button
                                                 onClick={handleManualBadgeGrant}
                                                 disabled={manualBadgeLoading || !manualBadgeInput.trim()}
-                                                className="px-5 py-2 bg-accent-warning text-background font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
+                                                className={`px-5 py-2 font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 whitespace-nowrap flex items-center gap-2 ${manualBadgeType === 'kol' ? 'bg-purple-500 text-white' : 'bg-amber-500 text-white'}`}
                                             >
                                                 {manualBadgeLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                                Grant Badge
+                                                Grant {manualBadgeType === 'kol' ? 'KOL' : 'Resume'} Badge
                                             </button>
                                         </div>
                                         <p className="text-[9px] text-foreground/30 font-medium">
-                                            Enter the user&apos;s Firebase UID (find in Users tab below or in Firebase Console). Tx hash is saved to payments collection for records.
+                                            Enter the user&apos;s Privy DID (from Users tab). KOL badge requires user to have a KOL profile. Tx hash optional for manual/free grants.
                                         </p>
                                     </div>
                                 </td>
@@ -948,7 +1018,105 @@ export default function AdminDashboard() {
                         )}
                     </div>
                 )}
-            </div>
+            </div>}
+
+            {/* PROPOSALS TAB */}
+            {activeTab === 'proposals' && (
+                <div className="space-y-4">
+                    {proposals.length === 0 ? (
+                        <div className="glass rounded-2xl py-20 text-center">
+                            <Zap className="w-10 h-10 text-foreground/10 mx-auto mb-4" />
+                            <p className="text-foreground/20 font-bold uppercase tracking-widest">No proposals yet</p>
+                        </div>
+                    ) : (
+                        proposals
+                            .filter(p => !search || p.projectName?.toLowerCase().includes(search.toLowerCase()) || p.twitter?.toLowerCase().includes(search.toLowerCase()) || p.specificKOL?.toLowerCase().includes(search.toLowerCase()))
+                            .map(p => (
+                                <div key={p.id} className={`glass border rounded-2xl p-6 transition-all ${p.status === 'new' ? 'border-yellow-400/20' : 'border-white/5'}`}>
+                                    <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                                        {/* Left */}
+                                        <div className="flex-1 space-y-3">
+                                            <div className="flex items-center gap-3 flex-wrap">
+                                                <span className="font-black text-base">{p.projectName}</span>
+                                                {p.status === 'new' && (
+                                                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-400">New</span>
+                                                )}
+                                                {p.status === 'contacted' && (
+                                                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/20 text-emerald-400">Contacted</span>
+                                                )}
+                                                <span className="text-[10px] text-foreground/30 font-mono">
+                                                    {p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString() : '—'}
+                                                </span>
+                                            </div>
+
+                                            <p className="text-sm text-foreground/60 leading-relaxed">{p.description}</p>
+
+                                            <div className="flex flex-wrap gap-3 text-[10px] font-bold">
+                                                {p.campaignType && <span className="px-2.5 py-1 rounded-full bg-accent-primary/10 border border-accent-primary/20 text-accent-primary">{p.campaignType}</span>}
+                                                {p.budget && <span className="px-2.5 py-1 rounded-full bg-emerald-400/10 border border-emerald-400/20 text-emerald-400">{p.budget}</span>}
+                                                {p.timeline && <span className="px-2.5 py-1 rounded-full bg-blue-400/10 border border-blue-400/20 text-blue-400">{p.timeline}</span>}
+                                                {p.targetNiches?.map((n: string) => (
+                                                    <span key={n} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-foreground/50">{n}</span>
+                                                ))}
+                                            </div>
+
+                                            <div className="flex flex-wrap items-center gap-4 text-xs">
+                                                {p.twitter && (
+                                                    <a href={`https://x.com/${p.twitter}`} target="_blank" rel="noopener noreferrer"
+                                                        className="flex items-center gap-1.5 text-accent-primary hover:underline font-bold">
+                                                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.847L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" /></svg>
+                                                        @{p.twitter}
+                                                    </a>
+                                                )}
+                                                {p.telegram && (
+                                                    <span className="flex items-center gap-1.5 text-blue-400 font-bold">
+                                                        <Send className="w-3 h-3" />
+                                                        @{p.telegram}
+                                                    </span>
+                                                )}
+                                                {p.specificKOL && (
+                                                    <span className="flex items-center gap-1.5 text-yellow-400 font-bold">
+                                                        <Zap className="w-3 h-3" />
+                                                        Wants: {p.specificKOL}
+                                                    </span>
+                                                )}
+                                                {p.notes && (
+                                                    <span className="flex items-center gap-1.5 text-foreground/40 font-medium">
+                                                        <FileText className="w-3 h-3" />
+                                                        {p.notes}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex sm:flex-col gap-2">
+                                            {p.status === 'new' && (
+                                                <button
+                                                    onClick={async () => {
+                                                        await updateDoc(doc(db, 'kol_proposals', p.id), { status: 'contacted' });
+                                                        fetchData();
+                                                    }}
+                                                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-400/10 border border-emerald-400/20 text-emerald-400 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-emerald-400/20 transition-colors"
+                                                >
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    Mark Contacted
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleDelete('kol_proposals', p.id)}
+                                                className="flex items-center gap-1.5 px-4 py-2 bg-red-400/10 border border-red-400/20 text-red-400 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-red-400/20 transition-colors"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                    )}
+                </div>
+            )}
         </div>
     );
 }
