@@ -7,7 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
-    collection, getDocs, deleteDoc, doc, updateDoc, query, orderBy, addDoc, serverTimestamp
+    collection, getDocs, doc, updateDoc, query, orderBy, addDoc, serverTimestamp
 } from 'firebase/firestore';
 import { JobPosting, Airdrop, TalentProfile, PaymentRecord, KOLProfile } from '@/lib/types';
 import {
@@ -121,12 +121,15 @@ export default function AdminDashboard() {
     }, [authLoading, user?.id]);
 
     const handleDelete = async (coll: string, id: string) => {
-        if (!window.confirm('Are you sure you want to delete this?')) return;
+        if (!window.confirm('Permanently delete this? This cannot be undone.')) return;
         try {
-            await deleteDoc(doc(db, coll, id));
+            const tok = await getAccessToken();
+            const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(tok ? { 'Authorization': `Bearer ${tok}` } : {}) };
+            const res = await fetch('/api/admin/delete', { method: 'POST', headers, body: JSON.stringify({ collection: coll, id }) });
+            if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Delete failed'); }
             fetchData();
-        } catch (err) {
-            alert('Failed to delete item.');
+        } catch (err: any) {
+            alert('Failed to delete: ' + (err.message || 'Unknown error'));
         }
     };
 
@@ -1068,6 +1071,12 @@ export default function AdminDashboard() {
                                 <a href={`/kols/${kol.id}`} target="_blank" className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 text-foreground/40 hover:border-white/20 transition-all">
                                     View
                                 </a>
+                                <button
+                                    onClick={() => handleDelete('kols', kol.id)}
+                                    className="p-1.5 rounded-xl bg-accent-danger/10 text-accent-danger hover:bg-accent-danger hover:text-white transition-all"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                             </div>
                         </div>
                     ))}
