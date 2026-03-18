@@ -980,6 +980,19 @@ export default function AdminDashboard() {
                                 <td className="px-6 py-6 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <button
+                                            onClick={async () => {
+                                                const tok = await getAccessToken();
+                                                const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(tok ? { 'Authorization': `Bearer ${tok}` } : {}) };
+                                                const res = await fetch('/api/admin/set-admin', { method: 'POST', headers, body: JSON.stringify({ targetId: talent.id, revoke: !!talent.isAdmin }) });
+                                                if (res.ok) fetchData();
+                                                else alert((await res.json()).error || 'Failed');
+                                            }}
+                                            title={talent.isAdmin ? 'Revoke admin' : 'Grant admin'}
+                                            className={`p-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all opacity-0 group-hover:opacity-100 ${talent.isAdmin ? 'bg-accent-primary/20 text-accent-primary hover:bg-red-500/20 hover:text-red-400' : 'bg-white/5 text-foreground/30 hover:bg-accent-primary/20 hover:text-accent-primary'}`}
+                                        >
+                                            <ShieldCheck className="w-4 h-4" />
+                                        </button>
+                                        <button
                                             onClick={() => handleDelete('talents', talent.id)}
                                             className="p-3 bg-accent-danger/10 text-accent-danger rounded-xl hover:bg-accent-danger hover:text-white transition-all opacity-0 group-hover:opacity-100"
                                         >

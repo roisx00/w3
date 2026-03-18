@@ -163,12 +163,14 @@ service cloud.firestore {
     // ─────────────────────────────────────────────────────────────────────────
 
     // ─── Admin check ──────────────────────────────────────────────────────────
-    // Primary: Privy DID cmmutno61018m0dlb7p754q7c (current admin)
-    // Fallback: email token claim (roisx00@gmail.com)
+    // Primary: Privy DID (owner account)
+    // Secondary: email token claim
+    // Tertiary: isAdmin: true field on talent doc (for multi-admin support)
     function isAdmin() {
       return request.auth != null
         && (request.auth.uid == 'cmmutno61018m0dlb7p754q7c'
-            || request.auth.token.email == 'roisx00@gmail.com');
+            || request.auth.token.email == 'roisx00@gmail.com'
+            || get(/databases/$(database)/documents/talents/$(request.auth.uid)).data.isAdmin == true);
     }
   }
 }
