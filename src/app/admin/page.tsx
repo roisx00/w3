@@ -147,7 +147,7 @@ export default function AdminDashboard() {
 
     const handleVerifyPayment = async (payment: PaymentRecord) => {
         const token = await getAccessToken();
-        const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const authHeaders: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
         try {
             switch (payment.type) {
                 case 'job_post':
