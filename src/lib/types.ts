@@ -144,7 +144,7 @@ export interface PaymentRecord {
     userId: string;
     userEmail: string;
     userDisplayName: string;
-    type: 'job_post' | 'airdrop_post' | 'user_badge' | 'cv_boost' | 'job_boost';
+    type: 'job_post' | 'airdrop_post' | 'user_badge' | 'kol_badge' | 'cv_boost' | 'job_boost' | 'kol_boost';
     amount: number;
     txHash: string;
     status: 'pending' | 'verified' | 'rejected';
