@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowRight, Menu, X, User, Copy, Check, Download, Send, QrCode, ChevronDown } from 'lucide-react';
+import GoldBadge from '@/components/GoldBadge';
+import KOLBadge from '@/components/KOLBadge';
 import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { useLoginWithOAuth, useWallets, useExportWallet } from '@privy-io/react-auth';
@@ -20,7 +22,7 @@ const Navbar = () => {
     const [sendError, setSendError] = useState('');
     const walletRef = useRef<HTMLDivElement>(null);
 
-    const { isLoggedIn, user } = useAppContext();
+    const { isLoggedIn, user, hasKolBadge } = useAppContext();
     const { initOAuth } = useLoginWithOAuth();
     const { wallets } = useWallets();
     const { exportWallet } = useExportWallet();
@@ -244,8 +246,13 @@ const Navbar = () => {
                                     <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-accent-success rounded-full border-2 border-background" />
                                 </div>
                                 <div className="hidden sm:flex flex-col leading-none">
-                                    <span className="text-xs font-black uppercase tracking-tight text-foreground truncate max-w-[100px]">
+                                    <span className="flex items-center gap-1 text-xs font-black uppercase tracking-tight text-foreground truncate max-w-[100px]">
                                         {user?.displayName?.split(' ')[0] || 'Profile'}
+                                        {hasKolBadge
+                                            ? <KOLBadge size={13} />
+                                            : user?.hasBadge
+                                                ? <GoldBadge size={13} />
+                                                : null}
                                     </span>
                                     <span className="text-[9px] font-bold uppercase tracking-widest text-accent-primary/70">
                                         Dashboard

@@ -49,10 +49,10 @@ export default function KOLCard({ kol }: { kol: KOLProfile }) {
                                 : <div className="w-full h-full flex items-center justify-center text-accent-primary font-black text-lg">{kol.displayName?.charAt(0)}</div>
                             }
                         </div>
-                        {kol.verified && (
+                        {(kol.hasBadge || kol.verified) && (
                             <div className="absolute -bottom-1 -right-1 w-6 h-6 drop-shadow-[0_0_5px_rgba(220,38,38,0.7)]">
                                 <svg viewBox="0 0 100 100" className="w-full h-full">
-                                    <path d={KOL_BADGE_PATH} fill="#dc2626" />
+                                    <path d={KOL_BADGE_PATH} fill={kol.verified ? '#dc2626' : '#ef4444'} />
                                     <path d="M 34 50 L 44 62 L 66 37" stroke="white" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                                 </svg>
                             </div>

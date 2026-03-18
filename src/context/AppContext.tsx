@@ -24,6 +24,7 @@ interface AppState {
     bookmarkedJobs: string[];
     trackedAirdrops: string[];
     savedResumes: string[];
+    hasKolBadge: boolean;
     login: () => void;
     logout: () => void;
     toggleBookmarkJob: (jobId: string) => void;
@@ -46,6 +47,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [trackedAirdrops, setTrackedAirdrops] = useState<string[]>([]);
     const [savedResumes, setSavedResumes] = useState<string[]>([]);
     const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+    const [hasKolBadge, setHasKolBadge] = useState(false);
 
     // Monitor Privy auth state → load Firestore profile
     useEffect(() => {
@@ -80,8 +82,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         (async () => {
             try {
-                const docRef = doc(db, 'talents', uid);
-                const docSnap = await getDoc(docRef);
+                const [docSnap, kolSnap] = await Promise.all([
+                    getDoc(doc(db, 'talents', uid)),
+                    getDoc(doc(db, 'kols', uid)),
+                ]);
+                setHasKolBadge(!!(kolSnap.exists() && kolSnap.data()?.hasBadge));
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -251,6 +256,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             bookmarkedJobs,
             trackedAirdrops,
             savedResumes,
+            hasKolBadge,
             login,
             logout,
             toggleBookmarkJob,

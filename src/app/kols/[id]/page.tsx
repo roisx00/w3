@@ -164,7 +164,7 @@ export default function KOLProfilePage() {
                                     </div>
                                 }
                             </div>
-                            {kol.verified && (
+                            {(kol.hasBadge || kol.verified) && (
                                 <div className="absolute -bottom-2 -right-2 flex items-center gap-1.5 bg-background/80 backdrop-blur-sm pl-1 pr-2 py-0.5 rounded-full border border-red-500/20">
                                     <div className="w-5 h-5 drop-shadow-[0_0_6px_rgba(220,38,38,0.8)]">
                                         <svg viewBox="0 0 100 100" className="w-full h-full">
@@ -178,7 +178,7 @@ export default function KOLProfilePage() {
                                             <path d="M 34 50 L 44 62 L 66 37" stroke="white" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                                         </svg>
                                     </div>
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-red-400">Verified</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-red-400">{kol.verified ? 'Verified' : 'KOL'}</span>
                                 </div>
                             )}
                         </div>

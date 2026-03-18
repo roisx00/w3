@@ -10,6 +10,7 @@ import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import PaymentModal from '@/components/PaymentModal';
 import BadgeSuccessModal from '@/components/BadgeSuccessModal';
+import KOLBadge from '@/components/KOLBadge';
 import { PRICES } from '@/lib/payments';
 import Link from 'next/link';
 
@@ -294,7 +295,11 @@ function DashboardContent() {
                         </div>
                         <h3 className="font-display font-black text-xl mb-1 flex items-center justify-center gap-1.5">
                             {user?.displayName || 'Anonymous'}
-                            {user?.hasBadge && <GoldBadge size={22} className="drop-shadow-[0_0_8px_rgba(234,179,8,0.4)]" />}
+                            {kolProfile?.hasBadge
+                                ? <KOLBadge size={22} className="drop-shadow-[0_0_8px_rgba(220,38,38,0.4)]" />
+                                : user?.hasBadge
+                                    ? <GoldBadge size={22} className="drop-shadow-[0_0_8px_rgba(234,179,8,0.4)]" />
+                                    : null}
                         </h3>
                         <span className="text-xs text-foreground/40 font-bold tracking-widest uppercase">{user?.roles?.length ? user.roles[0] : 'Web3 Professional'}</span>
 
