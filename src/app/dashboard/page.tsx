@@ -208,17 +208,13 @@ function DashboardContent() {
                 setBadgeSuccessType('resume');
             } else {
                 const token = await getAccessToken();
-                await fetch('/api/kols/save', {
+                const res = await fetch('/api/kols/claim-free-badge', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-                    body: JSON.stringify({ userId: user.id, data: { hasBadge: true, badgeTxHash: 'promo-free' } }),
+                    headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
                 });
-                await addDoc(collection(db, 'payments'), {
-                    userId: user.id, userEmail: user.email || '', userDisplayName: user.displayName || '',
-                    type: 'kol_badge', amount: 0, txHash: 'promo-free', status: 'verified',
-                    note: 'First 50 launch promo', createdAt: serverTimestamp(),
-                });
-                setKolProfile(prev => prev ? { ...prev, hasBadge: true, badgeTxHash: 'promo-free' } : prev);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to claim badge');
+                setKolProfile(prev => prev ? { ...prev, hasBadge: true, badgeTxHash: 'promo-free' } : { id: user.id, hasBadge: true, badgeTxHash: 'promo-free' });
                 setBadgeSuccessType('kol');
             }
         } catch (err) {
