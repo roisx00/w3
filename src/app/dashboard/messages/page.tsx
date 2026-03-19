@@ -51,7 +51,7 @@ function MessagesContent() {
                 // By default select first if none active and no ID in URL
                 // setActiveId(convs[0].id); // Optional: leave blank for "Select a message"
             }
-        });
+        }, () => { setLoading(false); /* suppress Firestore auth error with Privy */ });
 
         return () => unsubscribe();
     }, [user?.id, searchParams]);

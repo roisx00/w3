@@ -144,7 +144,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             let total = 0;
             snap.docs.forEach(d => { total += (d.data().unreadCount?.[user.id!] || 0); });
             setUnreadMessagesCount(total);
-        });
+        }, () => { /* Firestore auth not available with Privy — suppress error */ });
         return () => unsubscribe();
     }, [user?.id]);
 

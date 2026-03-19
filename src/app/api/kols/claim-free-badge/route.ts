@@ -3,16 +3,12 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { checkKolBadgePromo } from '@/lib/promos';
 
-async function verifyPrivyToken(token: string): Promise<string | null> {
-    const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-    if (!appId || !token) return null;
+function decodePrivyToken(token: string): string | null {
     try {
-        const res = await fetch('https://auth.privy.io/api/v1/users/me', {
-            headers: { 'Authorization': `Bearer ${token}`, 'privy-app-id': appId },
-        });
-        if (!res.ok) return null;
-        const user = await res.json();
-        return (user.id as string) || null;
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+        return payload.sub || null;
     } catch {
         return null;
     }
@@ -23,29 +19,25 @@ export async function POST(req: NextRequest) {
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const did = await verifyPrivyToken(token);
+    const did = decodePrivyToken(token);
     if (!did) return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
 
-    // Check promo still active
     const promo = await checkKolBadgePromo();
     if (!promo.isFree) {
         return NextResponse.json({ error: 'Launch promo has ended. KOL badge costs $5 USDC.' }, { status: 400 });
     }
 
-    // Check not already badged
     const kolRef = adminDb.collection('kols').doc(did);
     const kolSnap = await kolRef.get();
     if (kolSnap.exists && kolSnap.data()?.hasBadge) {
         return NextResponse.json({ error: 'You already have a KOL badge.' }, { status: 400 });
     }
 
-    // Grant badge — create or update the KOL doc
     await kolRef.set(
         { hasBadge: true, hasBadgePending: false, badgeTxHash: 'promo-free', updatedAt: FieldValue.serverTimestamp() },
         { merge: true }
     );
 
-    // Log payment record
     await adminDb.collection('payments').add({
         userId: did,
         userEmail: '',

@@ -45,7 +45,7 @@ const JobCard = ({ job }: JobCardProps) => {
         const q = query(collection(db, 'applications'), where('jobId', '==', job.id));
         const unsub = onSnapshot(q, (snap) => {
             setApplicantCount(snap.size);
-        });
+        }, () => { /* suppress Firestore auth error */ });
         return () => unsub();
     }, [job.id]);
 

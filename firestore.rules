@@ -4,8 +4,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ─── Talent / Resume profiles ─────────────────────────────────────────────
-    // Public read. Admin SDK (server-side API routes) bypasses these rules for
-    // badge grants etc. Client writes go through standard auth.
+    // All writes from the app go through Admin SDK (server API routes) which
+    // bypasses these rules. Client-side writes are not used with Privy auth.
     match /talents/{userId} {
       allow read: if true;
       allow create: if request.auth != null;
@@ -14,7 +14,6 @@ service cloud.firestore {
       allow delete: if request.auth != null
         && (request.auth.uid == userId || isAdmin());
 
-      // Peer reviews — reviewer can only write their own entry, not on themselves
       match /reviews/{reviewerId} {
         allow read: if true;
         allow create: if request.auth != null
@@ -28,7 +27,6 @@ service cloud.firestore {
     }
 
     // ─── KOL profiles ─────────────────────────────────────────────────────────
-    // Badge grants & saves go via /api/kols/save (Admin SDK) — bypasses rules.
     match /kols/{kolId} {
       allow read: if true;
       allow create: if request.auth != null;
@@ -37,7 +35,6 @@ service cloud.firestore {
       allow delete: if request.auth != null
         && (request.auth.uid == kolId || isAdmin());
 
-      // On-chain feedback left by badge-holding projects/users
       match /reviews/{reviewerId} {
         allow read: if true;
         allow create: if request.auth != null
@@ -72,6 +69,7 @@ service cloud.firestore {
     }
 
     // ─── Payments ─────────────────────────────────────────────────────────────
+    // All payment reads/writes go through Admin SDK (server API routes).
     match /payments/{paymentId} {
       allow read: if request.auth != null
         && (resource.data.userId == request.auth.uid || isAdmin());
@@ -80,11 +78,10 @@ service cloud.firestore {
     }
 
     // ─── Job applications ─────────────────────────────────────────────────────
+    // Public read needed for applicant counts on job cards (no Firebase Auth
+    // with Privy). Writes still require auth.
     match /applications/{appId} {
-      allow read: if request.auth != null
-        && (request.auth.uid == resource.data.applicantId
-            || request.auth.uid == resource.data.posterId
-            || isAdmin());
+      allow read: if true;
       allow create: if request.auth != null
         && request.resource.data.applicantId == request.auth.uid;
       allow delete: if request.auth != null
@@ -117,7 +114,6 @@ service cloud.firestore {
              get(/databases/$(database)/documents/conversations/$(convoId)).data.participants;
         allow create: if request.auth != null
           && request.resource.data.senderId == request.auth.uid;
-        // No update or delete on messages — immutable once sent
         allow update, delete: if false;
       }
     }
@@ -134,9 +130,8 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ─── KOL Proposals (Hire-a-KOL form submissions) ──────────────────────────
-    // Anyone can submit a proposal (no auth required — contact form).
-    // Only admin can read proposals (they contain private contact info).
+    // ─── KOL Proposals ────────────────────────────────────────────────────────
+    // Anyone can submit (contact form). Admin reads via Admin SDK.
     match /kol_proposals/{proposalId} {
       allow create: if true;
       allow read, update, delete: if isAdmin();
@@ -160,12 +155,11 @@ service cloud.firestore {
         && request.auth.uid == resource.data.userId;
       allow write: if false;
     }
-    // ─────────────────────────────────────────────────────────────────────────
 
     // ─── Admin check ──────────────────────────────────────────────────────────
-    // Primary: Privy DID (owner account)
-    // Secondary: email token claim
-    // Tertiary: isAdmin: true field on talent doc (for multi-admin support)
+    // NOTE: Since the app uses Privy (not Firebase Auth), request.auth is null
+    // for all client-side calls. Admin operations go through server API routes
+    // using Firebase Admin SDK which bypasses these rules entirely.
     function isAdmin() {
       return request.auth != null
         && (request.auth.uid == 'cmmutno61018m0dlb7p754q7c'

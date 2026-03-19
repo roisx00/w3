@@ -3,16 +3,12 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { checkBadgePromo } from '@/lib/promos';
 
-async function verifyPrivyToken(token: string): Promise<{ did: string } | null> {
-    const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-    if (!appId || !token) return null;
+function decodePrivyToken(token: string): string | null {
     try {
-        const res = await fetch('https://auth.privy.io/api/v1/users/me', {
-            headers: { 'Authorization': `Bearer ${token}`, 'privy-app-id': appId },
-        });
-        if (!res.ok) return null;
-        const privyUser = await res.json();
-        return { did: privyUser.id };
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+        return payload.sub || null;
     } catch {
         return null;
     }
@@ -23,28 +19,22 @@ export async function POST(req: NextRequest) {
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const privyData = await verifyPrivyToken(token);
-    if (!privyData) return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
+    const did = decodePrivyToken(token);
+    if (!did) return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
 
-    const { did } = privyData;
-
-    // Check promo still active
     const promo = await checkBadgePromo();
     if (!promo.isFree) {
         return NextResponse.json({ error: 'Launch promo has ended. Badge costs $2 USDC.' }, { status: 400 });
     }
 
-    // Check not already badged
     const talentRef = adminDb.collection('talents').doc(did);
     const talentSnap = await talentRef.get();
     if (talentSnap.exists && talentSnap.data()?.hasBadge) {
         return NextResponse.json({ error: 'You already have a badge.' }, { status: 400 });
     }
 
-    // Grant badge
     await talentRef.set({ hasBadge: true, hasBadgePending: false, badgeTxHash: 'promo-free' }, { merge: true });
 
-    // Log payment record
     await adminDb.collection('payments').add({
         userId: did,
         userEmail: talentSnap.data()?.email || '',

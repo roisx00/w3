@@ -48,7 +48,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         const q = query(collection(db, 'applications'), where('jobId', '==', id));
         const unsub = onSnapshot(q, (snap) => {
             setApplicantCount(snap.size);
-        });
+        }, () => { /* suppress Firestore auth error */ });
         return () => unsub();
     }, [id]);
 

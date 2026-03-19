@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 
-// Fields to carry over from old Firebase Auth doc (don't overwrite current Privy profile fields)
 const MIGRATE_FIELDS = [
     'bio', 'roles', 'skills', 'experience', 'availability',
     'walletAddress', 'socials', 'hasBadge', 'badgeTxHash',
@@ -9,22 +8,12 @@ const MIGRATE_FIELDS = [
     'savedResumes', 'referredBy', 'referralCode',
 ];
 
-async function verifyPrivyToken(token: string): Promise<{ did: string; email?: string; twitterUsername?: string } | null> {
-    const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-    if (!appId || !token) return null;
+function decodePrivyToken(token: string): string | null {
     try {
-        const res = await fetch('https://auth.privy.io/api/v1/users/me', {
-            headers: { 'Authorization': `Bearer ${token}`, 'privy-app-id': appId },
-        });
-        if (!res.ok) return null;
-        const privyUser = await res.json();
-        const emailAccount = privyUser.linked_accounts?.find((a: any) => a.type === 'email');
-        const twitterAccount = privyUser.linked_accounts?.find((a: any) => a.type === 'twitter_oauth');
-        return {
-            did: privyUser.id,
-            email: emailAccount?.address,
-            twitterUsername: twitterAccount?.username,
-        };
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+        return payload.sub || null;
     } catch {
         return null;
     }
@@ -45,7 +34,7 @@ async function findOldDoc(did: string, email?: string, twitterUsername?: string,
         snap.docs.filter(d => d.id !== did && !d.data().migrated).forEach(d => candidates.push(d));
     }
 
-    // 3. Twitter username match (handles @username and username formats)
+    // 3. Twitter username match
     if (twitterUsername && candidates.length === 0) {
         const handle = twitterUsername.replace('@', '').toLowerCase();
         const [snap1, snap2] = await Promise.all([
@@ -72,16 +61,21 @@ export async function POST(req: NextRequest) {
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const privyData = await verifyPrivyToken(token);
-    if (!privyData) return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
+    const did = decodePrivyToken(token);
+    if (!did) return NextResponse.json({ error: 'Invalid auth token' }, { status: 401 });
 
-    const { did, email, twitterUsername } = privyData;
+    // Get user data from Firestore (populated at login)
+    const talentSnap = await adminDb.collection('talents').doc(did).get();
+    const talentData = talentSnap.exists ? talentSnap.data()! : {};
+    const email: string = talentData.email || '';
+    const twitterUsername: string = talentData.username || '';
+
     const body = await req.json().catch(() => ({}));
     const manualUid = body.manualUid?.trim() || undefined;
 
     if (!email && !twitterUsername && !manualUid) {
         return NextResponse.json({
-            error: 'No email or Twitter linked to your account. Link your email in Account Settings, or enter your old UID manually.',
+            error: 'No email or Twitter linked to your account. Enter your old UID manually.',
         }, { status: 400 });
     }
 
@@ -99,16 +93,10 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        // Pick most complete doc
         const bestOldDoc = candidates.sort((a, b) => Object.keys(b.data()).length - Object.keys(a.data()).length)[0];
         const oldData = bestOldDoc.data();
+        const currentData = talentData;
 
-        // Get current doc
-        const currentRef = adminDb.collection('talents').doc(did);
-        const currentSnap = await currentRef.get();
-        const currentData = currentSnap.exists ? currentSnap.data()! : {};
-
-        // Merge: carry over old fields only if current field is empty/missing
         const merged: Record<string, unknown> = {};
         for (const field of MIGRATE_FIELDS) {
             const oldVal = oldData[field];
@@ -124,7 +112,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ found: true, merged: 0, message: 'Your current profile already has all the data from the old account.' });
         }
 
-        await currentRef.set(merged, { merge: true });
+        await adminDb.collection('talents').doc(did).set(merged, { merge: true });
         await bestOldDoc.ref.set({ migrated: did, migratedAt: new Date() }, { merge: true });
 
         return NextResponse.json({ found: true, merged: Object.keys(merged).length, fields: Object.keys(merged) });

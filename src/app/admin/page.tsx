@@ -7,7 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
-    collection, getDocs, doc, updateDoc, query, orderBy, addDoc, serverTimestamp
+    collection, doc, updateDoc, addDoc, serverTimestamp
 } from 'firebase/firestore';
 import { JobPosting, Airdrop, TalentProfile, PaymentRecord, KOLProfile } from '@/lib/types';
 import {
@@ -77,40 +77,44 @@ export default function AdminDashboard() {
         }
     }, [authLoading, isLoggedIn, router]);
 
+    const ADMIN_EMAIL = 'roisx00@gmail.com';
+
     const fetchData = async () => {
-        const isOwner = user?.id === process.env.NEXT_PUBLIC_ADMIN_UID || user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        const isOwner = user?.email === ADMIN_EMAIL;
+        console.log('[Admin] fetchData — email:', user?.email, '| isOwner:', isOwner, '| isAdmin field:', user?.isAdmin);
 
         if (!user?.isAdmin && !isOwner) {
+            console.log('[Admin] Not admin — email does not match and no isAdmin field');
             setLoading(false);
             return;
         }
         setLoading(true);
         setError(null);
         try {
-            const [jobsSnap, airdropsSnap, paymentsSnap, proposalsSnap, kolsSnap] = await Promise.all([
-                getDocs(query(collection(db, 'jobs'), orderBy('createdAt', 'desc'))),
-                getDocs(query(collection(db, 'airdrops'), orderBy('createdAt', 'desc'))),
-                getDocs(query(collection(db, 'payments'), orderBy('createdAt', 'desc'))),
-                getDocs(query(collection(db, 'kol_proposals'), orderBy('createdAt', 'desc'))),
-                getDocs(collection(db, 'kols')),
-            ]);
-            // talents may not have updatedAt on all docs — fallback to unordered
-            let talentsSnap;
-            try {
-                talentsSnap = await getDocs(query(collection(db, 'talents'), orderBy('updatedAt', 'desc')));
-            } catch {
-                talentsSnap = await getDocs(collection(db, 'talents'));
-            }
+            const token = await getAccessToken();
+            console.log('[Admin] Got Privy token:', token ? 'yes' : 'NO TOKEN');
+            if (!token) throw new Error('No auth token — please re-login');
 
-            setJobs(jobsSnap.docs.map(d => ({ id: d.id, ...d.data() } as JobPosting)));
-            setAirdrops(airdropsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Airdrop)));
-            setTalents(talentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as TalentProfile)));
-            setKols(kolsSnap.docs.map(d => ({ id: d.id, ...d.data() } as KOLProfile)));
-            setPayments(paymentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PaymentRecord)));
-            setProposals(proposalsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+            const res = await fetch('/api/admin/data', {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            console.log('[Admin] /api/admin/data status:', res.status);
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || `HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            console.log('[Admin] Data received — jobs:', data.jobs?.length, 'payments:', data.payments?.length);
+
+            setJobs(data.jobs || []);
+            setAirdrops(data.airdrops || []);
+            setTalents(data.talents || []);
+            setKols(data.kols || []);
+            setPayments(data.payments || []);
+            setProposals(data.proposals || []);
         } catch (err: any) {
-            console.error("Error fetching admin data:", err);
-            setError(err.message || "Failed to fetch data. Check your Firestore permissions and indexes.");
+            console.error('[Admin] fetchData error:', err);
+            setError(err.message || 'Failed to fetch data.');
         } finally {
             setLoading(false);
         }
@@ -363,7 +367,7 @@ export default function AdminDashboard() {
 
     const pendingCount = payments.filter(p => p.status === 'pending').length;
 
-    if (loading) return (
+    if (authLoading || loading) return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4">
             <RefreshCw className="w-8 h-8 animate-spin text-accent-primary" />
             <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40">Syncing Command Center...</p>
@@ -386,7 +390,7 @@ export default function AdminDashboard() {
         </div>
     );
 
-    if (!user?.isAdmin && user?.id !== process.env.NEXT_PUBLIC_ADMIN_UID && user?.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+    if (!user?.isAdmin && user?.email !== ADMIN_EMAIL) {
         return (
             <div className="min-h-screen flex items-center justify-center p-6 text-center">
                 <div className="max-w-md space-y-6 bg-white/5 p-12 rounded-[2rem] border border-white/10 shadow-2xl">
@@ -625,11 +629,11 @@ export default function AdminDashboard() {
                                                                 const res = await fetch('/api/upload', { method: 'POST', body: data });
                                                                 if (!res.ok) throw new Error('Upload failed');
                                                                 const { url } = await res.json();
-                                                                
+
                                                                 const t = [...adminAirdropForm.tasks];
                                                                 t[idx] = { ...t[idx], imageUrl: url };
                                                                 setAdminAirdropForm(p => ({ ...p, tasks: t }));
-                                                            } catch (err) { 
+                                                            } catch (err) {
                                                                 console.error('Error uploading task image', err);
                                                                 alert('Failed to upload image.');
                                                             } finally {
@@ -1052,7 +1056,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <div className="flex flex-wrap gap-3 text-[10px] text-foreground/40">
                                     <span>{kol.niches?.join(', ') || 'No niches'}</span>
-                                    {kol.totalReach ? <span>{kol.totalReach >= 1000000 ? `${(kol.totalReach/1000000).toFixed(1)}M` : `${Math.round(kol.totalReach/1000)}K`} reach</span> : null}
+                                    {kol.totalReach ? <span>{kol.totalReach >= 1000000 ? `${(kol.totalReach / 1000000).toFixed(1)}M` : `${Math.round(kol.totalReach / 1000)}K`} reach</span> : null}
                                     <span className="font-mono text-[9px] text-foreground/20">{kol.id}</span>
                                 </div>
                             </div>

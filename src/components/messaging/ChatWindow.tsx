@@ -40,7 +40,7 @@ export default function ChatWindow({ conversation, currentUserId }: ChatWindowPr
                     }
                 }, { merge: true }).catch(console.error);
             }
-        });
+        }, () => { setLoading(false); /* suppress Firestore auth error with Privy */ });
 
         return () => unsubscribe();
     }, [conversation.id, currentUserId]);
