@@ -7,7 +7,7 @@ import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, getDocs, q
 import { checkBadgePromo, checkKolBadgePromo } from '@/lib/promos';
 import { JobPosting, Airdrop, TalentProfile } from '@/lib/types';
 import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle, Bot, Users as UsersIcon, Eye, Bookmark, MessageSquare, Shield, Mail, Twitter, Wallet, Megaphone, Rocket, RefreshCw } from 'lucide-react';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { usePrivy, useWallets, useLoginWithEmail } from '@privy-io/react-auth';
 import PaymentModal from '@/components/PaymentModal';
 import BadgeSuccessModal from '@/components/BadgeSuccessModal';
 import KOLBadge from '@/components/KOLBadge';
@@ -29,6 +29,19 @@ function DashboardContent() {
     const { user, bookmarkedJobs, trackedAirdrops, savedResumes, updateProfile, logReferralEarning, logout, unreadMessagesCount } = useAppContext();
     const { user: privyUser, linkEmail, unlinkEmail, linkTwitter, getAccessToken } = usePrivy();
     const { wallets } = useWallets();
+    const { sendCode, loginWithCode } = useLoginWithEmail({
+        onComplete: async (_user, _isNew, _wasAuth) => {
+            // Email just verified via OTP — now trigger restore
+            const linkedEmail = _user.linkedAccounts?.find((a: any) => a.type === 'email')?.address;
+            if (linkedEmail) setVerifiedEmail(linkedEmail);
+            setRestoreStep('restoring');
+            await handleMigrateDataWithEmail(linkedEmail || restoreEmail);
+        },
+        onError: (_code, _message) => {
+            setOtpLoading(false);
+            setMigrateResult('error:Invalid code. Please try again.');
+        },
+    });
     const [savedJobsData, setSavedJobsData] = useState<JobPosting[]>([]);
     const [trackedAirdropsData, setTrackedAirdropsData] = useState<Airdrop[]>([]);
     const [savedResumesData, setSavedResumesData] = useState<TalentProfile[]>([]);
@@ -48,6 +61,11 @@ function DashboardContent() {
     const [migrateResult, setMigrateResult] = useState<string | null>(null);
     const [migrateUid, setMigrateUid] = useState('');
     const [showRestoreModal, setShowRestoreModal] = useState(false);
+    const [restoreEmail, setRestoreEmail] = useState('');
+    const [restoreOtp, setRestoreOtp] = useState('');
+    const [restoreStep, setRestoreStep] = useState<'email' | 'otp' | 'restoring'>('email');
+    const [otpLoading, setOtpLoading] = useState(false);
+    const [verifiedEmail, setVerifiedEmail] = useState('');
 
     const referralLink = user?.id
         ? `${typeof window !== 'undefined' ? window.location.origin : 'https://w3hub.space'}?ref=${user.id}`
@@ -252,7 +270,7 @@ function DashboardContent() {
         }
     };
 
-    const handleMigrateData = async () => {
+    const handleMigrateDataWithEmail = async (emailOverride?: string) => {
         setMigrateLoading(true);
         setMigrateResult(null);
         try {
@@ -260,7 +278,10 @@ function DashboardContent() {
             const res = await fetch('/api/migrate-data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-                body: JSON.stringify({ manualUid: migrateUid.trim() || undefined }),
+                body: JSON.stringify({
+                    email: emailOverride || undefined,
+                    manualUid: migrateUid.trim() || undefined,
+                }),
             });
             const data = await res.json();
             if (!res.ok) {
@@ -270,14 +291,17 @@ function DashboardContent() {
             } else if (data.merged === 0) {
                 setMigrateResult('already:' + (data.message || 'Your profile already has all your previous data.'));
             } else {
-                setMigrateResult('success:' + `Restored ${data.merged} field(s) from your previous account.`);
+                setMigrateResult('success:Restored successfully from your previous account.');
             }
         } catch {
             setMigrateResult('error:Something went wrong. Try again.');
         } finally {
             setMigrateLoading(false);
+            setOtpLoading(false);
         }
     };
+
+    const handleMigrateData = () => handleMigrateDataWithEmail(user?.email || undefined);
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-12">
@@ -732,54 +756,22 @@ function DashboardContent() {
                     {showRestoreModal && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
                             <div className="glass w-full max-w-md p-8 rounded-2xl border border-white/10 shadow-2xl space-y-6">
+
+                                {/* Header */}
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-[10px] font-black uppercase tracking-widest text-accent-primary mb-1">Account Recovery</p>
                                         <h2 className="text-2xl font-black uppercase tracking-tight">Restore Previous Account</h2>
                                     </div>
-                                    <button onClick={() => setShowRestoreModal(false)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-all text-foreground/40">✕</button>
+                                    <button
+                                        onClick={() => { setShowRestoreModal(false); setRestoreStep('email'); setMigrateResult(null); setRestoreOtp(''); setRestoreEmail(''); }}
+                                        className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-all text-foreground/40"
+                                    >✕</button>
                                 </div>
 
-                                {!migrateResult ? (
-                                    <>
-                                        <div className="space-y-3">
-                                            <p className="text-sm text-foreground/60 leading-relaxed">
-                                                We'll search for your previous account using your linked email:
-                                            </p>
-                                            {user?.email ? (
-                                                <div className="flex items-center gap-3 px-4 py-3 bg-accent-primary/5 border border-accent-primary/20 rounded-xl">
-                                                    <Mail className="w-4 h-4 text-accent-primary shrink-0" />
-                                                    <span className="font-mono text-sm font-bold text-accent-primary">{user.email}</span>
-                                                </div>
-                                            ) : (
-                                                <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-xs text-foreground/40">
-                                                    No email linked. Add an email in Account Settings first, or use the UID field below.
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-foreground/30">Old Account UID (optional)</label>
-                                            <input
-                                                type="text"
-                                                value={migrateUid}
-                                                onChange={e => setMigrateUid(e.target.value)}
-                                                placeholder="Paste your old Firebase UID here"
-                                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-mono text-foreground/70 outline-none focus:border-accent-primary/40 placeholder:text-foreground/20"
-                                            />
-                                            <p className="text-[10px] text-foreground/20">Only needed if email match fails.</p>
-                                        </div>
-
-                                        <button
-                                            onClick={handleMigrateData}
-                                            disabled={migrateLoading || (!user?.email && !migrateUid.trim())}
-                                            className="w-full py-3 bg-accent-primary text-background font-black uppercase text-xs tracking-widest rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
-                                        >
-                                            {migrateLoading ? <><RefreshCw className="w-4 h-4 animate-spin" /> Searching...</> : 'Restore Now'}
-                                        </button>
-                                    </>
-                                ) : migrateResult.startsWith('success:') ? (
-                                    <div className="text-center space-y-4 py-4">
+                                {/* ── SUCCESS ── */}
+                                {migrateResult?.startsWith('success:') ? (
+                                    <div className="text-center space-y-5 py-2">
                                         <div className="w-16 h-16 mx-auto rounded-full bg-accent-success/10 border border-accent-success/30 flex items-center justify-center">
                                             <BadgeCheck className="w-8 h-8 text-accent-success" />
                                         </div>
@@ -791,36 +783,159 @@ function DashboardContent() {
                                             Reload Dashboard
                                         </button>
                                     </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className={`px-4 py-3 rounded-xl text-sm ${migrateResult.startsWith('notfound:') ? 'bg-white/5 border border-white/10 text-foreground/50' : migrateResult.startsWith('already:') ? 'bg-accent-success/5 border border-accent-success/20 text-accent-success/70' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
-                                            {migrateResult.startsWith('notfound:') && '🔍 '}
-                                            {migrateResult.startsWith('already:') && '✓ '}
-                                            {migrateResult.startsWith('error:') && '✕ '}
-                                            {migrateResult.split(':').slice(1).join(':')}
+
+                                ) : migrateResult?.startsWith('already:') ? (
+                                    <div className="text-center space-y-4 py-2">
+                                        <BadgeCheck className="w-12 h-12 mx-auto text-accent-success/60" />
+                                        <p className="text-sm text-foreground/60">{migrateResult.replace('already:', '')}</p>
+                                        <button onClick={() => setShowRestoreModal(false)} className="w-full py-2 text-foreground/40 text-xs font-bold hover:text-foreground/60 transition-colors">Close</button>
+                                    </div>
+
+                                ) : user?.email ? (
+                                    /* ── HAS EMAIL — direct restore ── */
+                                    <div className="space-y-5">
+                                        <p className="text-sm text-foreground/60 leading-relaxed">
+                                            We'll search for your previous account using your verified email:
+                                        </p>
+                                        <div className="flex items-center gap-3 px-4 py-3 bg-accent-primary/5 border border-accent-primary/20 rounded-xl">
+                                            <Mail className="w-4 h-4 text-accent-primary shrink-0" />
+                                            <span className="font-mono text-sm font-bold text-accent-primary">{user.email}</span>
+                                            <span className="ml-auto text-[9px] font-black uppercase tracking-widest text-accent-success">Verified</span>
                                         </div>
-                                        {migrateResult.startsWith('notfound:') && (
+
+                                        {migrateResult?.startsWith('notfound:') && (
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-foreground/30">Try with Old UID</label>
+                                                <div className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-foreground/50">
+                                                    🔍 {migrateResult.replace('notfound:', '')}
+                                                </div>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-foreground/30">Try Old Firebase UID</label>
                                                 <input
                                                     type="text"
                                                     value={migrateUid}
                                                     onChange={e => setMigrateUid(e.target.value)}
-                                                    placeholder="Paste your old Firebase UID"
+                                                    placeholder="Paste your old account UID"
                                                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-mono text-foreground/70 outline-none focus:border-accent-primary/40 placeholder:text-foreground/20"
                                                 />
-                                                <button
-                                                    onClick={handleMigrateData}
-                                                    disabled={migrateLoading || !migrateUid.trim()}
-                                                    className="w-full py-3 bg-accent-primary text-background font-black uppercase text-xs tracking-widest rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
-                                                >
-                                                    {migrateLoading ? <><RefreshCw className="w-4 h-4 animate-spin" /> Searching...</> : 'Try with UID'}
-                                                </button>
                                             </div>
                                         )}
-                                        <button onClick={() => setShowRestoreModal(false)} className="w-full py-2 text-foreground/30 text-xs font-bold hover:text-foreground/50 transition-colors">
-                                            Close
+
+                                        {migrateResult?.startsWith('error:') && (
+                                            <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                                                ✕ {migrateResult.replace('error:', '')}
+                                            </div>
+                                        )}
+
+                                        <button
+                                            onClick={handleMigrateData}
+                                            disabled={migrateLoading}
+                                            className="w-full py-3 bg-accent-primary text-background font-black uppercase text-xs tracking-widest rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
+                                        >
+                                            {migrateLoading
+                                                ? <><RefreshCw className="w-4 h-4 animate-spin" /> Searching...</>
+                                                : migrateResult?.startsWith('notfound:') ? 'Try with UID' : 'Restore Now'}
                                         </button>
+                                    </div>
+
+                                ) : restoreStep === 'email' ? (
+                                    /* ── NO EMAIL — enter email step ── */
+                                    <div className="space-y-5">
+                                        <p className="text-sm text-foreground/60 leading-relaxed">
+                                            Enter the email address you used with your previous account. We'll send a verification code.
+                                        </p>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-foreground/30">Previous Email</label>
+                                            <input
+                                                type="email"
+                                                value={restoreEmail}
+                                                onChange={e => setRestoreEmail(e.target.value)}
+                                                placeholder="you@example.com"
+                                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-foreground/80 outline-none focus:border-accent-primary/40 placeholder:text-foreground/20"
+                                            />
+                                        </div>
+                                        {migrateResult?.startsWith('error:') && (
+                                            <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                                                ✕ {migrateResult.replace('error:', '')}
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={async () => {
+                                                if (!restoreEmail.trim()) return;
+                                                setOtpLoading(true);
+                                                setMigrateResult(null);
+                                                try {
+                                                    await sendCode({ email: restoreEmail.trim() });
+                                                    setRestoreStep('otp');
+                                                } catch (err: any) {
+                                                    setMigrateResult('error:' + (err.message || 'Failed to send code.'));
+                                                } finally {
+                                                    setOtpLoading(false);
+                                                }
+                                            }}
+                                            disabled={otpLoading || !restoreEmail.trim()}
+                                            className="w-full py-3 bg-accent-primary text-background font-black uppercase text-xs tracking-widest rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
+                                        >
+                                            {otpLoading ? <><RefreshCw className="w-4 h-4 animate-spin" /> Sending...</> : 'Send Verification Code'}
+                                        </button>
+                                    </div>
+
+                                ) : restoreStep === 'otp' ? (
+                                    /* ── OTP verify step ── */
+                                    <div className="space-y-5">
+                                        <div className="text-center">
+                                            <div className="w-12 h-12 mx-auto rounded-full bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center mb-3">
+                                                <Mail className="w-5 h-5 text-accent-primary" />
+                                            </div>
+                                            <p className="text-sm text-foreground/60">Code sent to</p>
+                                            <p className="font-mono font-bold text-accent-primary">{restoreEmail}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-foreground/30">6-Digit Code</label>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                maxLength={6}
+                                                value={restoreOtp}
+                                                onChange={e => setRestoreOtp(e.target.value.replace(/\D/g, ''))}
+                                                placeholder="000000"
+                                                className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-2xl font-mono font-black text-center text-foreground outline-none focus:border-accent-primary/40 tracking-[0.5em] placeholder:text-foreground/10"
+                                            />
+                                        </div>
+                                        {migrateResult?.startsWith('error:') && (
+                                            <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                                                ✕ {migrateResult.replace('error:', '')}
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={async () => {
+                                                if (restoreOtp.length !== 6) return;
+                                                setOtpLoading(true);
+                                                setMigrateResult(null);
+                                                try {
+                                                    await loginWithCode({ code: restoreOtp });
+                                                    // onComplete handler takes over from here
+                                                } catch (err: any) {
+                                                    setMigrateResult('error:' + (err.message || 'Invalid code. Try again.'));
+                                                    setOtpLoading(false);
+                                                }
+                                            }}
+                                            disabled={otpLoading || restoreOtp.length !== 6}
+                                            className="w-full py-3 bg-accent-primary text-background font-black uppercase text-xs tracking-widest rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
+                                        >
+                                            {otpLoading ? <><RefreshCw className="w-4 h-4 animate-spin" /> Verifying...</> : 'Verify & Restore'}
+                                        </button>
+                                        <button
+                                            onClick={() => { setRestoreStep('email'); setRestoreOtp(''); setMigrateResult(null); }}
+                                            className="w-full py-2 text-foreground/30 text-xs font-bold hover:text-foreground/50 transition-colors"
+                                        >
+                                            ← Use different email
+                                        </button>
+                                    </div>
+
+                                ) : (
+                                    /* ── restoring step ── */
+                                    <div className="text-center py-6 space-y-3">
+                                        <RefreshCw className="w-8 h-8 animate-spin text-accent-primary mx-auto" />
+                                        <p className="text-sm text-foreground/50">Searching for your previous account...</p>
                                     </div>
                                 )}
                             </div>

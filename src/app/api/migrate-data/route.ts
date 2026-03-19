@@ -19,37 +19,18 @@ function decodePrivyToken(token: string): string | null {
     }
 }
 
-async function findOldDoc(did: string, email?: string, twitterUsername?: string, manualUid?: string) {
+async function findOldDoc(did: string, email: string, manualUid?: string) {
     const candidates: FirebaseFirestore.QueryDocumentSnapshot[] = [];
 
-    // 1. Manual UID lookup — most precise
+    // 1. Manual UID — most precise fallback
     if (manualUid && manualUid !== did) {
         const snap = await adminDb.collection('talents').doc(manualUid).get();
         if (snap.exists) candidates.push(snap as any);
     }
 
-    // 2. Email match
+    // 2. Email match — primary method
     if (email && candidates.length === 0) {
         const snap = await adminDb.collection('talents').where('email', '==', email).limit(5).get();
-        snap.docs.filter(d => d.id !== did && !d.data().migrated).forEach(d => candidates.push(d));
-    }
-
-    // 3. Twitter username match
-    if (twitterUsername && candidates.length === 0) {
-        const handle = twitterUsername.replace('@', '').toLowerCase();
-        const [snap1, snap2] = await Promise.all([
-            adminDb.collection('talents').where('socials.twitter', '==', `@${handle}`).limit(3).get(),
-            adminDb.collection('talents').where('socials.twitter', '==', handle).limit(3).get(),
-        ]);
-        [...snap1.docs, ...snap2.docs]
-            .filter(d => d.id !== did && !d.data().migrated)
-            .forEach(d => { if (!candidates.find(c => c.id === d.id)) candidates.push(d); });
-    }
-
-    // 4. Username field match
-    if (twitterUsername && candidates.length === 0) {
-        const handle = twitterUsername.replace('@', '').toLowerCase();
-        const snap = await adminDb.collection('talents').where('username', '==', handle).limit(3).get();
         snap.docs.filter(d => d.id !== did && !d.data().migrated).forEach(d => candidates.push(d));
     }
 
@@ -67,27 +48,25 @@ export async function POST(req: NextRequest) {
     // Get user data from Firestore (populated at login)
     const talentSnap = await adminDb.collection('talents').doc(did).get();
     const talentData = talentSnap.exists ? talentSnap.data()! : {};
-    const email: string = talentData.email || '';
-    const twitterUsername: string = talentData.username || '';
-
     const body = await req.json().catch(() => ({}));
     const manualUid = body.manualUid?.trim() || undefined;
+    // Accept email from body (freshly OTP-verified) or fall back to stored email
+    const email: string = body.email?.trim() || talentData.email || '';
 
-    if (!email && !twitterUsername && !manualUid) {
+    if (!email && !manualUid) {
         return NextResponse.json({
-            error: 'No email or Twitter linked to your account. Enter your old UID manually.',
+            error: 'No email found. Verify your email first.',
         }, { status: 400 });
     }
 
     try {
-        const candidates = await findOldDoc(did, email, twitterUsername, manualUid);
+        const candidates = await findOldDoc(did, email, manualUid);
 
         if (candidates.length === 0) {
             return NextResponse.json({
                 found: false,
                 message: `No previous account found. Searched by: ${[
                     email && `email (${email})`,
-                    twitterUsername && `Twitter (@${twitterUsername})`,
                     manualUid && `UID (${manualUid})`,
                 ].filter(Boolean).join(', ')}`,
             });
