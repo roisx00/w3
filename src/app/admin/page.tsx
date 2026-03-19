@@ -429,6 +429,30 @@ export default function AdminDashboard() {
                     <h1 className="text-5xl font-black uppercase tracking-tighter">Admin <span className="text-accent-primary">Dashboard</span></h1>
                 </div>
 
+                <button
+                    onClick={async () => {
+                        if (!window.confirm('⚠️ DANGER: This will permanently delete ALL talent profiles and resume PDFs. This cannot be undone. Are you sure?')) return;
+                        if (!window.confirm('Final confirmation: Delete ALL resumes and talent data?')) return;
+                        try {
+                            const tok = await getAccessToken();
+                            const res = await fetch('/api/admin/wipe-resumes', {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${tok}` },
+                            });
+                            const result = await res.json();
+                            if (!res.ok) throw new Error(result.error);
+                            alert(`✓ Wiped ${result.deleted} talent profiles + all resume PDFs.`);
+                            fetchData();
+                        } catch (err: any) {
+                            alert('Failed: ' + err.message);
+                        }
+                    }}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all flex items-center gap-2"
+                >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Wipe All Resumes
+                </button>
+
                 <div className="flex flex-wrap gap-2 glass p-1 rounded-2xl">
                     <button
                         onClick={() => { setActiveTab('payments'); setSearch(''); }}

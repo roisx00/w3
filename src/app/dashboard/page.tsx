@@ -47,6 +47,7 @@ function DashboardContent() {
     const [migrateLoading, setMigrateLoading] = useState(false);
     const [migrateResult, setMigrateResult] = useState<string | null>(null);
     const [migrateUid, setMigrateUid] = useState('');
+    const [showRestoreModal, setShowRestoreModal] = useState(false);
 
     const referralLink = user?.id
         ? `${typeof window !== 'undefined' ? window.location.origin : 'https://w3hub.space'}?ref=${user.id}`
@@ -263,16 +264,16 @@ function DashboardContent() {
             });
             const data = await res.json();
             if (!res.ok) {
-                setMigrateResult(data.error || 'Migration failed.');
+                setMigrateResult('error:' + (data.error || 'Restore failed.'));
             } else if (!data.found) {
-                setMigrateResult(data.message || 'No previous account found. Try entering your old Firebase UID below.');
+                setMigrateResult('notfound:' + (data.message || 'No previous account found.'));
             } else if (data.merged === 0) {
-                setMigrateResult(data.message || 'Your profile already has all your previous data.');
+                setMigrateResult('already:' + (data.message || 'Your profile already has all your previous data.'));
             } else {
-                setMigrateResult(`✓ Restored ${data.merged} field(s): ${data.fields?.join(', ')}. Reload the page to see updates.`);
+                setMigrateResult('success:' + `Restored ${data.merged} field(s) from your previous account.`);
             }
         } catch {
-            setMigrateResult('Something went wrong. Try again.');
+            setMigrateResult('error:Something went wrong. Try again.');
         } finally {
             setMigrateLoading(false);
         }
@@ -398,31 +399,6 @@ function DashboardContent() {
                             );
                         })()}
 
-                        {/* Restore previous account (Firebase → Privy migration) */}
-                        <div className="pt-2 border-t border-white/5 space-y-2">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30 px-1">Restore Old Account</p>
-                            <button
-                                onClick={handleMigrateData}
-                                disabled={migrateLoading}
-                                className="w-full flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-foreground/50 hover:border-accent-primary/30 hover:text-foreground/70 transition-colors disabled:opacity-50"
-                            >
-                                <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${migrateLoading ? 'animate-spin' : ''}`} />
-                                {migrateLoading ? 'Searching...' : 'Restore Previous Account Data'}
-                            </button>
-                            <input
-                                type="text"
-                                value={migrateUid}
-                                onChange={e => setMigrateUid(e.target.value)}
-                                placeholder="Old Firebase UID (optional fallback)"
-                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono text-foreground/40 outline-none focus:border-accent-primary/30 placeholder:text-foreground/20"
-                            />
-                            {migrateResult && (
-                                <p className={`text-[10px] px-1 leading-relaxed ${migrateResult.startsWith('✓') ? 'text-accent-success' : 'text-foreground/50'}`}>{migrateResult}</p>
-                            )}
-                            <p className="text-[10px] text-foreground/20 px-1 leading-relaxed">
-                                Auto-searches by your linked email + X handle. Enter old UID only if not found.
-                            </p>
-                        </div>
 
                         {/* Wallet */}
                         {(() => {
@@ -717,6 +693,140 @@ function DashboardContent() {
                     </section>
 
                     {/* My Profiles */}
+                    {/* Restore Previous Account — shown when profile is empty */}
+                    {!user?.bio && !user?.roles?.length && !user?.skills?.length && !migrateResult?.startsWith('success') && (
+                        <section className="glass border border-accent-primary/20 p-6 rounded-2xl bg-accent-primary/3">
+                            <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                                    <RefreshCw className="w-5 h-5 text-accent-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-black text-sm uppercase tracking-tight mb-1">Had an account before?</p>
+                                    <p className="text-xs text-foreground/50 leading-relaxed">If you used W3Hub before, restore your previous profile data — bio, skills, experience, badges and more.</p>
+                                </div>
+                                <button
+                                    onClick={() => { setShowRestoreModal(true); setMigrateResult(null); setMigrateUid(''); }}
+                                    className="shrink-0 px-4 py-2 bg-accent-primary text-background text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-opacity"
+                                >
+                                    Restore Account
+                                </button>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Restore success banner */}
+                    {migrateResult?.startsWith('success:') && (
+                        <section className="glass border border-accent-success/30 p-5 rounded-2xl bg-accent-success/5 flex items-center gap-3">
+                            <BadgeCheck className="w-5 h-5 text-accent-success shrink-0" />
+                            <div>
+                                <p className="font-black text-sm text-accent-success">Restored Successfully</p>
+                                <p className="text-xs text-foreground/50">{migrateResult.replace('success:', '')} Reload the page to see your data.</p>
+                            </div>
+                            <button onClick={() => window.location.reload()} className="ml-auto px-3 py-1.5 bg-accent-success/10 border border-accent-success/30 text-accent-success text-[10px] font-black uppercase rounded-xl hover:bg-accent-success/20 transition-all">
+                                Reload
+                            </button>
+                        </section>
+                    )}
+
+                    {/* Restore Modal */}
+                    {showRestoreModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                            <div className="glass w-full max-w-md p-8 rounded-2xl border border-white/10 shadow-2xl space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-accent-primary mb-1">Account Recovery</p>
+                                        <h2 className="text-2xl font-black uppercase tracking-tight">Restore Previous Account</h2>
+                                    </div>
+                                    <button onClick={() => setShowRestoreModal(false)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-all text-foreground/40">✕</button>
+                                </div>
+
+                                {!migrateResult ? (
+                                    <>
+                                        <div className="space-y-3">
+                                            <p className="text-sm text-foreground/60 leading-relaxed">
+                                                We'll search for your previous account using your linked email:
+                                            </p>
+                                            {user?.email ? (
+                                                <div className="flex items-center gap-3 px-4 py-3 bg-accent-primary/5 border border-accent-primary/20 rounded-xl">
+                                                    <Mail className="w-4 h-4 text-accent-primary shrink-0" />
+                                                    <span className="font-mono text-sm font-bold text-accent-primary">{user.email}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-xs text-foreground/40">
+                                                    No email linked. Add an email in Account Settings first, or use the UID field below.
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-foreground/30">Old Account UID (optional)</label>
+                                            <input
+                                                type="text"
+                                                value={migrateUid}
+                                                onChange={e => setMigrateUid(e.target.value)}
+                                                placeholder="Paste your old Firebase UID here"
+                                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-mono text-foreground/70 outline-none focus:border-accent-primary/40 placeholder:text-foreground/20"
+                                            />
+                                            <p className="text-[10px] text-foreground/20">Only needed if email match fails.</p>
+                                        </div>
+
+                                        <button
+                                            onClick={handleMigrateData}
+                                            disabled={migrateLoading || (!user?.email && !migrateUid.trim())}
+                                            className="w-full py-3 bg-accent-primary text-background font-black uppercase text-xs tracking-widest rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
+                                        >
+                                            {migrateLoading ? <><RefreshCw className="w-4 h-4 animate-spin" /> Searching...</> : 'Restore Now'}
+                                        </button>
+                                    </>
+                                ) : migrateResult.startsWith('success:') ? (
+                                    <div className="text-center space-y-4 py-4">
+                                        <div className="w-16 h-16 mx-auto rounded-full bg-accent-success/10 border border-accent-success/30 flex items-center justify-center">
+                                            <BadgeCheck className="w-8 h-8 text-accent-success" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-lg text-accent-success mb-1">Restored Successfully!</p>
+                                            <p className="text-sm text-foreground/50">{migrateResult.replace('success:', '')}</p>
+                                        </div>
+                                        <button onClick={() => window.location.reload()} className="w-full py-3 bg-accent-success/10 border border-accent-success/30 text-accent-success font-black uppercase text-xs tracking-widest rounded-xl hover:bg-accent-success/20 transition-all">
+                                            Reload Dashboard
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className={`px-4 py-3 rounded-xl text-sm ${migrateResult.startsWith('notfound:') ? 'bg-white/5 border border-white/10 text-foreground/50' : migrateResult.startsWith('already:') ? 'bg-accent-success/5 border border-accent-success/20 text-accent-success/70' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
+                                            {migrateResult.startsWith('notfound:') && '🔍 '}
+                                            {migrateResult.startsWith('already:') && '✓ '}
+                                            {migrateResult.startsWith('error:') && '✕ '}
+                                            {migrateResult.split(':').slice(1).join(':')}
+                                        </div>
+                                        {migrateResult.startsWith('notfound:') && (
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-foreground/30">Try with Old UID</label>
+                                                <input
+                                                    type="text"
+                                                    value={migrateUid}
+                                                    onChange={e => setMigrateUid(e.target.value)}
+                                                    placeholder="Paste your old Firebase UID"
+                                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-mono text-foreground/70 outline-none focus:border-accent-primary/40 placeholder:text-foreground/20"
+                                                />
+                                                <button
+                                                    onClick={handleMigrateData}
+                                                    disabled={migrateLoading || !migrateUid.trim()}
+                                                    className="w-full py-3 bg-accent-primary text-background font-black uppercase text-xs tracking-widest rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
+                                                >
+                                                    {migrateLoading ? <><RefreshCw className="w-4 h-4 animate-spin" /> Searching...</> : 'Try with UID'}
+                                                </button>
+                                            </div>
+                                        )}
+                                        <button onClick={() => setShowRestoreModal(false)} className="w-full py-2 text-foreground/30 text-xs font-bold hover:text-foreground/50 transition-colors">
+                                            Close
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     <section>
                         <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30 mb-4">My Profiles</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
