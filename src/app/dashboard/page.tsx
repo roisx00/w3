@@ -337,7 +337,7 @@ function DashboardContent() {
                                 </span>
                             )}
                         </Link>
-                        <Link href={`/talents/${user?.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl text-foreground/50 transition-colors font-bold text-sm">
+                        <Link href={`/talents/${user?.username || encodeURIComponent(user?.id || '')}`} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl text-foreground/50 transition-colors font-bold text-sm">
                             <FileText className="w-4 h-4" /> My Resume
                         </Link>
                         <Link href="/onboarding" className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl text-foreground/50 transition-colors font-bold text-sm">
@@ -868,7 +868,7 @@ function DashboardContent() {
                                     <div className="h-full bg-accent-primary rounded-full transition-all" style={{ width: `${profilePct}%` }} />
                                 </div>
                                 <div className="flex gap-2 mb-3">
-                                    <Link href={`/talents/${user?.id}`}
+                                    <Link href={`/talents/${user?.username || encodeURIComponent(user?.id || '')}`}
                                         className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-foreground/60 text-[10px] font-black uppercase tracking-widest rounded-xl hover:border-accent-primary/30 hover:text-accent-primary transition-all">
                                         <Eye className="w-3 h-3" /> View
                                     </Link>

@@ -116,7 +116,7 @@ const TalentCard = ({ talent }: TalentCardProps) => {
                         </div>
                     </div>
                     <Link
-                        href={`/talents/${talent.id}`}
+                        href={`/talents/${talent.username || encodeURIComponent(talent.id)}`}
                         className="p-2 glass hover:bg-white/10 rounded-lg transition-colors group/link"
                     >
                         <ExternalLink className="w-4 h-4 text-accent-primary group-hover/link:scale-110 transition-transform" />
@@ -164,7 +164,7 @@ const TalentCard = ({ talent }: TalentCardProps) => {
             </div>
 
             <Link
-                href={`/talents/${talent.id}`}
+                href={`/talents/${talent.username || encodeURIComponent(talent.id)}`}
                 className="block w-full py-3 bg-accent-primary text-white text-center rounded-xl text-xs font-bold tracking-widest uppercase transition-all shadow-sm hover:shadow-md hover:bg-accent-secondary"
             >
                 View Full Profile

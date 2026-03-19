@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, updateDoc, increment } from 'firebase/firestore';
 import { TalentProfile } from '@/lib/types';
 import { useAppContext } from '@/context/AppContext';
 import ReviewSection from '@/components/ReviewSection';
@@ -20,11 +20,18 @@ export default function TalentDetailPage({ params }: { params: Promise<{ id: str
     useEffect(() => {
         async function fetchAndIncrement() {
             try {
-                const docRef = doc(db, 'talents', id);
-                updateDoc(docRef, { views: increment(1) }).catch(() => {});
-                const docSnap = await getDoc(docRef);
+                // Try direct DID lookup first
+                let docRef = doc(db, 'talents', id);
+                let docSnap = await getDoc(docRef);
+                // Fallback: lookup by username (for short URLs like /talents/internxbt)
+                if (!docSnap.exists()) {
+                    const q = query(collection(db, 'talents'), where('username', '==', id));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) docSnap = snap.docs[0] as any;
+                }
                 if (docSnap.exists()) {
                     setTalent({ id: docSnap.id, ...docSnap.data() } as TalentProfile);
+                    updateDoc(doc(db, 'talents', docSnap.id), { views: increment(1) }).catch(() => {});
                 }
             } catch (err) {
                 console.error('Error fetching talent:', err);
