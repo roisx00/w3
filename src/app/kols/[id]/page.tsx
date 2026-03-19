@@ -16,6 +16,7 @@ const KOL_BADGE_PATH = "M 50 4 C 61.5,4 52.6,13 61.1,15.8 C 69.7,18.5 67.8,6 77.
 import Link from 'next/link';
 import { computeW3Score, getW3Tier, getW3ScoreBreakdown } from '@/lib/w3score';
 import { PRICES } from '@/lib/payments';
+import { checkKolBadgePromo } from '@/lib/promos';
 import PaymentModal from '@/components/PaymentModal';
 import BadgeSuccessModal from '@/components/BadgeSuccessModal';
 import KOLFeedbackSection from '@/components/KOLFeedbackSection';
@@ -62,6 +63,7 @@ export default function KOLProfilePage() {
     const [showBadgeModal, setShowBadgeModal] = useState(false);
     const [badgeLoading, setBadgeLoading] = useState(false);
     const [showKolSuccess, setShowKolSuccess] = useState(false);
+    const [kolBadgeFree, setKolBadgeFree] = useState(false);
 
     const isOwn = user?.id === id;
 
@@ -71,6 +73,10 @@ export default function KOLProfilePage() {
             if (snap.exists()) setKol({ id: snap.id, ...snap.data() } as KOLProfile);
         }).finally(() => setLoading(false));
     }, [id]);
+
+    useEffect(() => {
+        checkKolBadgePromo().then(({ isFree }) => setKolBadgeFree(isFree));
+    }, []);
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-screen">
@@ -246,12 +252,40 @@ export default function KOLProfilePage() {
                                     </Link>
                                 )}
                                 {isOwn && !kol.hasBadge && (
-                                    <button
-                                        onClick={() => setShowBadgeModal(true)}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-amber-500/20 transition-all"
-                                    >
-                                        <BadgeCheck className="w-3.5 h-3.5" /> Get KOL Badge · $5
-                                    </button>
+                                    kolBadgeFree ? (
+                                        <button
+                                            onClick={async () => {
+                                                setBadgeLoading(true);
+                                                try {
+                                                    const token = await getAccessToken();
+                                                    const res = await fetch('/api/kols/claim-free-badge', {
+                                                        method: 'POST',
+                                                        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+                                                    });
+                                                    const data = await res.json();
+                                                    if (!res.ok) throw new Error(data.error || 'Failed');
+                                                    setKol(prev => prev ? { ...prev, hasBadge: true, badgeTxHash: 'promo-free' } : prev);
+                                                    setShowKolSuccess(true);
+                                                } catch (err: any) {
+                                                    alert(err.message || 'Failed to claim badge.');
+                                                } finally {
+                                                    setBadgeLoading(false);
+                                                }
+                                            }}
+                                            disabled={badgeLoading}
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-amber-500/20 transition-all disabled:opacity-50"
+                                        >
+                                            {badgeLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
+                                            {badgeLoading ? 'Claiming…' : '🎁 FREE KOL Badge'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowBadgeModal(true)}
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-amber-500/20 transition-all"
+                                        >
+                                            <BadgeCheck className="w-3.5 h-3.5" /> Get KOL Badge · $5
+                                        </button>
+                                    )
                                 )}
                                 {isOwn && kol.hasBadge && (
                                     <span className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 font-black text-xs uppercase tracking-widest rounded-xl">

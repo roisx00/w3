@@ -6,12 +6,6 @@ import { ArrowRight, ArrowLeft, CheckCircle2, XCircle, User, Briefcase, Award, P
 import { useAppContext } from '@/context/AppContext';
 import { UserRole, Experience } from '@/lib/types';
 import AuthGuard from '@/components/auth/AuthGuard';
-import { checkBadgePromo } from '@/lib/promos';
-import PaymentModal from '@/components/PaymentModal';
-import { PRICES } from '@/lib/payments';
-import { db } from '@/lib/firebase';
-import { doc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
-
 const STEPS = [
     { id: 'basic', title: 'Identity', icon: User },
     { id: 'roles', title: 'Expertise', icon: Award },
@@ -36,8 +30,6 @@ function OnboardingContent() {
     const [copiedLink, setCopiedLink] = useState(false);
     const [errors, setErrors] = useState<string[]>([]);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
-    const [showBadgeModal, setShowBadgeModal] = useState(false);
-    const [paymentLoading, setPaymentLoading] = useState(false);
     const [fetchingGithub, setFetchingGithub] = useState(false);
     const [githubError, setGithubError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
@@ -181,34 +173,6 @@ function OnboardingContent() {
             ...(hasBadgeOverride ? { hasBadge: true } : {}),
         } as any);
         setDone(true);
-    };
-
-    const handleBadgePayment = async (txHash: string) => {
-        if (!user?.id) return;
-        setPaymentLoading(true);
-        try {
-            // 1. Record payment
-            await addDoc(collection(db, 'payments'), {
-                userId: user.id,
-                userEmail: user.email || '',
-                userDisplayName: user.displayName || '',
-                type: 'user_badge',
-                amount: PRICES.USER_BADGE,
-                txHash,
-                status: 'verified',
-                createdAt: serverTimestamp(),
-            });
-            // 2. Update talent doc
-            await updateDoc(doc(db, 'talents', user.id), { hasBadge: true, badgeTxHash: txHash });
-            
-            // 3. Finalize profile and show done screen
-            setShowBadgeModal(false);
-            publish(true);
-        } catch (err) {
-            alert('Failed to activate badge. Please try again.');
-        } finally {
-            setPaymentLoading(false);
-        }
     };
 
     const handleBack = () => {
@@ -664,14 +628,6 @@ function OnboardingContent() {
                 </div>
             </div>
 
-            <PaymentModal
-                isOpen={showBadgeModal}
-                onClose={() => setShowBadgeModal(false)}
-                onConfirm={handleBadgePayment}
-                amount={PRICES.USER_BADGE}
-                description="Access Badge (Required for Hub)"
-                loading={paymentLoading}
-            />
         </div>
     );
 }

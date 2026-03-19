@@ -533,6 +533,45 @@ function DashboardContent() {
 
                 {/* Main Content */}
                 <main className="lg:col-span-3 space-y-12">
+
+                    {/* ── Mobile Wallet Card (hidden on desktop) ── */}
+                    {(() => {
+                        const embedded = wallets.find((w: any) => w.walletClientType === 'privy');
+                        if (!embedded) return null;
+                        return (
+                            <div className="lg:hidden glass p-5 border border-accent-success/20 bg-accent-success/3 rounded-2xl space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-accent-success animate-pulse" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-accent-success">Embedded Wallet · Base</p>
+                                    </div>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-foreground/20 px-2 py-0.5 bg-white/5 rounded-lg">Auto-Generated</span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5">
+                                    <Wallet className="w-3.5 h-3.5 text-accent-success shrink-0" />
+                                    <span className="flex-1 font-mono text-xs text-foreground/70 truncate">{embedded.address}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => { navigator.clipboard.writeText(embedded.address); }}
+                                        className="flex items-center justify-center gap-2 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:border-accent-primary/30 hover:text-accent-primary transition-all"
+                                    >
+                                        <Copy className="w-3.5 h-3.5" /> Copy Address
+                                    </button>
+                                    <button
+                                        onClick={() => (embedded as any).exportWallet?.()}
+                                        className="flex items-center justify-center gap-2 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:border-accent-warning/30 hover:text-accent-warning transition-all"
+                                    >
+                                        <Shield className="w-3.5 h-3.5" /> Export Key
+                                    </button>
+                                </div>
+                                <p className="text-[9px] text-foreground/20 leading-relaxed">
+                                    Keep your private key safe. Never share it with anyone.
+                                </p>
+                            </div>
+                        );
+                    })()}
+
                     {/* Badge Status — Both Badges */}
                     <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Resume Badge */}
@@ -1053,7 +1092,7 @@ function DashboardContent() {
                                 </h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {savedResumesData.length > 0 ? savedResumesData.map(talent => (
-                                        <Link key={talent.id} href={`/talents/${talent.id}`} className="glass p-4 group hover:border-accent-secondary/30 transition-colors flex items-center gap-4">
+                                        <Link key={talent.id} href={`/talents/${talent.username || encodeURIComponent(talent.id)}`} className="glass p-4 group hover:border-accent-secondary/30 transition-colors flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-xl bg-accent-secondary/10 border border-accent-secondary/20 flex items-center justify-center font-bold text-accent-secondary text-sm overflow-hidden shrink-0">
                                                 {talent.photoUrl 
                                                     ? <img src={talent.photoUrl} alt="" className="w-full h-full object-cover" />
