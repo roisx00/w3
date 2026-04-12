@@ -6,7 +6,6 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { KOLProfile } from '@/lib/types';
 import { useAppContext } from '@/context/AppContext';
-import { usePrivy } from '@privy-io/react-auth';
 import {
     ExternalLink, TrendingUp, Megaphone, Zap,
     Globe, Send, Copy, Check, Loader2, Pencil, MessageSquare, Info, BadgeCheck
@@ -54,8 +53,7 @@ function StatBox({ label, value, sub }: { label: string; value: string; sub?: st
 export default function KOLProfilePage() {
     const params = useParams<{ id: string }>();
     const id = decodeURIComponent(params.id);
-    const { user, logReferralEarning } = useAppContext();
-    const { getAccessToken } = usePrivy();
+    const { user, logReferralEarning, getAccessToken } = useAppContext();
     const [kol, setKol] = useState<KOLProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);

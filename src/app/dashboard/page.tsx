@@ -7,8 +7,8 @@ import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, getDocs, q
 import { signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut } from 'firebase/auth';
 import { checkBadgePromo, checkKolBadgePromo } from '@/lib/promos';
 import { JobPosting, Airdrop, TalentProfile } from '@/lib/types';
-import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle, Bot, Users as UsersIcon, Eye, Bookmark, MessageSquare, Shield, Mail, Twitter, Wallet, Megaphone, Rocket, RefreshCw } from 'lucide-react';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { Briefcase, Zap, Settings, Award, Clock, ArrowUpRight, Edit3, BadgeCheck, TrendingUp, Lock, Radio, Gift, Copy, Check, LogOut, FileText, PlusCircle, Bot, Users as UsersIcon, Eye, Bookmark, MessageSquare, Shield, Twitter, Wallet, Megaphone, Rocket, RefreshCw } from 'lucide-react';
+
 import PaymentModal from '@/components/PaymentModal';
 import BadgeSuccessModal from '@/components/BadgeSuccessModal';
 import KOLBadge from '@/components/KOLBadge';
@@ -27,9 +27,7 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-    const { user, bookmarkedJobs, trackedAirdrops, savedResumes, updateProfile, logReferralEarning, logout, unreadMessagesCount } = useAppContext();
-    const { user: privyUser, linkEmail, unlinkEmail, linkTwitter, getAccessToken } = usePrivy();
-    const { wallets } = useWallets();
+    const { user, bookmarkedJobs, trackedAirdrops, savedResumes, updateProfile, logReferralEarning, logout, unreadMessagesCount, getAccessToken } = useAppContext();
 
     const [savedJobsData, setSavedJobsData] = useState<JobPosting[]>([]);
     const [trackedAirdropsData, setTrackedAirdropsData] = useState<Airdrop[]>([]);
@@ -367,63 +365,25 @@ function DashboardContent() {
                             <Shield className="w-3 h-3" /> Account Security
                         </p>
 
-                        {/* X / Twitter */}
-                        {(() => {
-                            const twitterAccount = privyUser?.linkedAccounts?.find((a: any) => a.type === 'twitter_oauth') as any;
-                            return twitterAccount ? (
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-xs font-bold text-foreground/70">
-                                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.847L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" /></svg>
-                                        @{twitterAccount.username}
-                                    </div>
-                                    <button onClick={() => linkTwitter()} className="text-[10px] font-black text-foreground/30 hover:text-accent-primary transition-colors uppercase tracking-widest">Change</button>
-                                </div>
-                            ) : (
-                                <button onClick={() => linkTwitter()} className="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-foreground/50 hover:border-accent-primary/30 transition-colors">
-                                    <span className="flex items-center gap-2">
-                                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.847L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" /></svg>
-                                        Link X Account
-                                    </span>
-                                    <span className="text-accent-primary">+</span>
-                                </button>
-                            );
-                        })()}
-
-                        {/* Email backup */}
-                        {(() => {
-                            const emailAccount = privyUser?.linkedAccounts?.find((a: any) => a.type === 'email') as any;
-                            return emailAccount ? (
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-xs font-bold text-foreground/70">
-                                        <Mail className="w-3.5 h-3.5" />
-                                        {emailAccount.address}
-                                    </div>
-                                    <button onClick={() => unlinkEmail(emailAccount.address)} className="text-[10px] font-black text-foreground/30 hover:text-accent-danger transition-colors uppercase tracking-widest">Remove</button>
-                                </div>
-                            ) : (
-                                <button onClick={() => linkEmail()} className="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-foreground/50 hover:border-accent-primary/30 transition-colors">
-                                    <span className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> Add Email Backup</span>
-                                    <span className="text-accent-primary">+</span>
-                                </button>
-                            );
-                        })()}
+                        {/* X / Twitter — linked via OAuth */}
+                        <div className="flex items-center gap-2 text-xs font-bold text-foreground/70">
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.847L1.254 2.25H8.08l4.259 5.631L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" /></svg>
+                            {user?.username ? `@${user.username}` : user?.socials?.twitter || 'X Connected'}
+                            <span className="ml-auto text-[9px] font-black text-accent-success uppercase tracking-widest">Linked</span>
+                        </div>
 
 
                         {/* Wallet */}
-                        {(() => {
-                            const embedded = wallets.find((w: any) => w.walletClientType === 'privy');
-                            return embedded ? (
-                                <div className="flex items-center gap-2 text-xs font-bold text-foreground/50">
-                                    <Wallet className="w-3.5 h-3.5 text-accent-success" />
-                                    <span className="font-mono">{embedded.address.slice(0, 6)}...{embedded.address.slice(-4)}</span>
-                                    <span className="text-[9px] text-accent-success uppercase tracking-widest font-black">Auto</span>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2 text-xs text-foreground/30">
-                                    <Wallet className="w-3.5 h-3.5" /> Wallet generating...
-                                </div>
-                            );
-                        })()}
+                        {user?.walletAddress ? (
+                            <div className="flex items-center gap-2 text-xs font-bold text-foreground/50">
+                                <Wallet className="w-3.5 h-3.5 text-accent-success" />
+                                <span className="font-mono">{user.walletAddress.slice(0, 6)}...{user.walletAddress.slice(-4)}</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 text-xs text-foreground/30">
+                                <Wallet className="w-3.5 h-3.5" /> Add wallet in profile
+                            </div>
+                        )}
                     </div>
 
                     {/* Access & Boosts */}
@@ -535,42 +495,26 @@ function DashboardContent() {
                 <main className="lg:col-span-3 space-y-12">
 
                     {/* ── Mobile Wallet Card (hidden on desktop) ── */}
-                    {(() => {
-                        const embedded = wallets.find((w: any) => w.walletClientType === 'privy');
-                        if (!embedded) return null;
-                        return (
-                            <div className="lg:hidden glass p-5 border border-accent-success/20 bg-accent-success/3 rounded-2xl space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-accent-success animate-pulse" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-accent-success">Embedded Wallet · Base</p>
-                                    </div>
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-foreground/20 px-2 py-0.5 bg-white/5 rounded-lg">Auto-Generated</span>
+                    {user?.walletAddress && (
+                        <div className="lg:hidden glass p-5 border border-accent-success/20 bg-accent-success/3 rounded-2xl space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-accent-success animate-pulse" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-accent-success">Wallet · Base</p>
                                 </div>
-                                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5">
-                                    <Wallet className="w-3.5 h-3.5 text-accent-success shrink-0" />
-                                    <span className="flex-1 font-mono text-xs text-foreground/70 truncate">{embedded.address}</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={() => { navigator.clipboard.writeText(embedded.address); }}
-                                        className="flex items-center justify-center gap-2 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:border-accent-primary/30 hover:text-accent-primary transition-all"
-                                    >
-                                        <Copy className="w-3.5 h-3.5" /> Copy Address
-                                    </button>
-                                    <button
-                                        onClick={() => (embedded as any).exportWallet?.()}
-                                        className="flex items-center justify-center gap-2 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:border-accent-warning/30 hover:text-accent-warning transition-all"
-                                    >
-                                        <Shield className="w-3.5 h-3.5" /> Export Key
-                                    </button>
-                                </div>
-                                <p className="text-[9px] text-foreground/20 leading-relaxed">
-                                    Keep your private key safe. Never share it with anyone.
-                                </p>
                             </div>
-                        );
-                    })()}
+                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5">
+                                <Wallet className="w-3.5 h-3.5 text-accent-success shrink-0" />
+                                <span className="flex-1 font-mono text-xs text-foreground/70 truncate">{user.walletAddress}</span>
+                            </div>
+                            <button
+                                onClick={() => navigator.clipboard.writeText(user.walletAddress)}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:border-accent-primary/30 hover:text-accent-primary transition-all"
+                            >
+                                <Copy className="w-3.5 h-3.5" /> Copy Address
+                            </button>
+                        </div>
+                    )}
 
                     {/* Badge Status — Both Badges */}
                     <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">

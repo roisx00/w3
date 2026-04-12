@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAppContext } from '@/context/AppContext';
-import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { KOLProfile, KOLNiche, ContentType, KOLCampaign } from '@/lib/types';
 import {
@@ -56,8 +55,7 @@ function StepBar({ step, total }: { step: number; total: number }) {
 }
 
 export default function KOLRegisterPage() {
-    const { user, isLoggedIn } = useAppContext();
-    const { getAccessToken } = usePrivy();
+    const { user, isLoggedIn, getAccessToken } = useAppContext();
     const router = useRouter();
     const [step, setStep] = useState(0);
     const [saving, setSaving] = useState(false);

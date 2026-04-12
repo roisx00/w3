@@ -157,9 +157,8 @@ service cloud.firestore {
     }
 
     // ─── Admin check ──────────────────────────────────────────────────────────
-    // NOTE: Since the app uses Privy (not Firebase Auth), request.auth is null
-    // for all client-side calls. Admin operations go through server API routes
-    // using Firebase Admin SDK which bypasses these rules entirely.
+    // Admin operations can go through client-side (if isAdmin() is true)
+    // or through server API routes (Admin SDK) which bypasses these rules.
     function isAdmin() {
       return request.auth != null
         && (request.auth.uid == 'cmmutno61018m0dlb7p754q7c'

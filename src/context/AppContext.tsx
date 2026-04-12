@@ -1,10 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { TalentProfile, JobPosting, Airdrop } from '@/lib/types';
+import { TalentProfile } from '@/lib/types';
 import { computeProfileScore } from '@/lib/promos';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import {
     doc,
     getDoc,
@@ -14,8 +14,9 @@ import {
     serverTimestamp,
     onSnapshot,
     query,
-    where
+    where,
 } from 'firebase/firestore';
+import { startXLogin, handleXCallback, XUser } from '@/lib/xAuth';
 
 interface AppState {
     user: TalentProfile | null;
@@ -33,108 +34,173 @@ interface AppState {
     updateProfile: (profile: Partial<TalentProfile>) => void;
     logReferralEarning: (paymentType: string, amount: number, txHash: string, payer: TalentProfile) => Promise<void>;
     unreadMessagesCount: number;
+    getAccessToken: () => Promise<string | null>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user: privyUser, authenticated, ready, login, logout: privyLogout } = usePrivy();
-    const { wallets } = useWallets();
-
     const [user, setUser] = useState<TalentProfile | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [bookmarkedJobs, setBookmarkedJobs] = useState<string[]>([]);
     const [trackedAirdrops, setTrackedAirdrops] = useState<string[]>([]);
     const [savedResumes, setSavedResumes] = useState<string[]>([]);
-    const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
     const [hasKolBadge, setHasKolBadge] = useState(false);
+    const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
-    // Monitor Privy auth state → load Firestore profile
-    useEffect(() => {
-        if (!ready) return;
+    // Returns a fresh Firebase ID token for authenticated API calls
+    const getAccessToken = async (): Promise<string | null> => {
+        if (!auth?.currentUser) return null;
+        try { return await auth.currentUser.getIdToken(); } catch { return null; }
+    };
 
-        if (!authenticated || !privyUser) {
-            setUser(null);
-            setAuthLoading(false);
-            return;
-        }
-
-        const uid = privyUser.id; // Privy DID — used as Firestore doc key
-        const twitterAccount = privyUser.linkedAccounts?.find((a: any) => a.type === 'twitter_oauth');
-        const emailAccount = privyUser.linkedAccounts?.find((a: any) => a.type === 'email') as any;
-
+    // Load Firestore profile after X auth
+    const loadFirestoreProfile = async (uid: string, xUser: XUser) => {
         const shellUser: TalentProfile = {
             id: uid,
-            email: emailAccount?.address || '',
-            username: (twitterAccount as any)?.username || uid.slice(-8),
-            displayName: (twitterAccount as any)?.name || (twitterAccount as any)?.username || 'Web3 User',
-            photoUrl: (twitterAccount as any)?.profilePictureUrl || '',
+            email: '',
+            username: xUser.username,
+            displayName: xUser.name || xUser.username,
+            photoUrl: xUser.avatar || '',
             walletAddress: '',
             roles: [],
             skills: [],
             experience: [],
             availability: 'Full-time',
             bio: '',
-            socials: {
-                twitter: (twitterAccount as any)?.username ? `@${(twitterAccount as any).username}` : '',
-            },
+            socials: { twitter: `@${xUser.username}` },
         } as any;
 
-        (async () => {
-            try {
-                const [docSnap, kolSnap] = await Promise.all([
-                    getDoc(doc(db, 'talents', uid)),
-                    getDoc(doc(db, 'kols', uid)),
-                ]);
-                setHasKolBadge(!!(kolSnap.exists() && kolSnap.data()?.hasBadge));
+        try {
+            const [docSnap, kolSnap] = await Promise.all([
+                getDoc(doc(db, 'talents', uid)),
+                getDoc(doc(db, 'kols', uid)),
+            ]);
 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    setUser({ ...data, id: uid } as TalentProfile);
+            setHasKolBadge(!!(kolSnap.exists() && kolSnap.data()?.hasBadge));
 
-                    if (Array.isArray(data.bookmarkedJobs)) {
-                        setBookmarkedJobs(data.bookmarkedJobs);
-                        localStorage.setItem('hub_bookmarked_jobs', JSON.stringify(data.bookmarkedJobs));
-                    }
-                    if (Array.isArray(data.trackedAirdrops)) {
-                        setTrackedAirdrops(data.trackedAirdrops);
-                        localStorage.setItem('hub_tracked_airdrops', JSON.stringify(data.trackedAirdrops));
-                    }
-                    if (Array.isArray(data.savedResumes)) {
-                        setSavedResumes(data.savedResumes);
-                        localStorage.setItem('hub_saved_resumes', JSON.stringify(data.savedResumes));
-                    }
-                } else {
-                    // New user — seed initial doc + check referral
-                    const refCode = typeof window !== 'undefined' ? localStorage.getItem('hub_ref') : null;
-                    const seedData: any = {
-                        ...shellUser,
-                        createdAt: serverTimestamp(),
-                    };
-                    if (refCode && refCode !== uid) {
-                        seedData.referredBy = refCode;
-                        localStorage.removeItem('hub_ref');
-                    }
-                    await setDoc(doc(db, 'talents', uid), seedData, { merge: true });
-                    setUser(shellUser);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setUser({ ...data, id: uid } as TalentProfile);
+                if (Array.isArray(data.bookmarkedJobs)) {
+                    setBookmarkedJobs(data.bookmarkedJobs);
+                    localStorage.setItem('hub_bookmarked_jobs', JSON.stringify(data.bookmarkedJobs));
                 }
-            } catch (e) {
-                console.warn('Firestore unavailable, using Privy data only:', e);
+                if (Array.isArray(data.trackedAirdrops)) {
+                    setTrackedAirdrops(data.trackedAirdrops);
+                    localStorage.setItem('hub_tracked_airdrops', JSON.stringify(data.trackedAirdrops));
+                }
+                if (Array.isArray(data.savedResumes)) {
+                    setSavedResumes(data.savedResumes);
+                    localStorage.setItem('hub_saved_resumes', JSON.stringify(data.savedResumes));
+                }
+            } else {
+                // New user — seed profile + capture referral
+                const refCode = typeof window !== 'undefined' ? localStorage.getItem('hub_ref') : null;
+                const seedData: any = { ...shellUser, createdAt: serverTimestamp() };
+                if (refCode && refCode !== uid) {
+                    seedData.referredBy = refCode;
+                    localStorage.removeItem('hub_ref');
+                }
+                await setDoc(doc(db, 'talents', uid), seedData, { merge: true });
                 setUser(shellUser);
             }
-            setAuthLoading(false);
-        })();
-    }, [ready, authenticated, privyUser?.id]);
-
-    // Auto-sync embedded wallet address to profile once generated
-    useEffect(() => {
-        if (!user?.id || !wallets.length) return;
-        const embedded = wallets.find((w: any) => w.walletClientType === 'privy');
-        if (embedded && !user.walletAddress) {
-            setDoc(doc(db, 'talents', user.id), { walletAddress: embedded.address }, { merge: true }).catch(() => {});
-            setUser(prev => prev ? { ...prev, walletAddress: embedded.address } : prev);
+        } catch (e) {
+            console.warn('[AppContext] Firestore unavailable, using shell user:', e);
+            setUser(shellUser);
         }
-    }, [wallets, user?.id]);
+        setAuthLoading(false);
+    };
+
+    // Sign in to Firebase with X access token, get custom token, load profile
+    const signInAndLoad = async (xUser: XUser) => {
+        const uid = `tw_${xUser.id}`;
+        const xToken = localStorage.getItem('x_access_token');
+
+        try {
+            if (xToken && auth) {
+                const res = await fetch('/api/firebase-auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${xToken}`,
+                    },
+                    body: JSON.stringify({ uid }),
+                });
+                if (res.ok) {
+                    const { customToken } = await res.json();
+                    if (customToken) await signInWithCustomToken(auth, customToken);
+                }
+            }
+        } catch (e) {
+            console.warn('[AppContext] Firebase sign-in failed, continuing without Firebase Auth:', e);
+        }
+
+        await loadFirestoreProfile(uid, xUser);
+    };
+
+    // On mount: handle OAuth callback or restore from Firebase Auth session
+    useEffect(() => {
+        let cancelled = false;
+
+        const init = async () => {
+            // 1. Check for OAuth callback (?code=...&state=...)
+            if (typeof window !== 'undefined' && window.location.search.includes('code=') && window.location.search.includes('state=')) {
+                const xUser = await handleXCallback();
+                if (!cancelled && xUser) {
+                    await signInAndLoad(xUser);
+                    return;
+                }
+            }
+
+            // 2. Restore session via Firebase Auth state + stored X token
+            if (!auth) {
+                setAuthLoading(false);
+                return;
+            }
+
+            const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+                if (cancelled) return;
+
+                if (!firebaseUser) {
+                    setUser(null);
+                    setAuthLoading(false);
+                    return;
+                }
+
+                // Firebase user exists — restore X user info
+                const xToken = localStorage.getItem('x_access_token');
+                if (!xToken) {
+                    setUser(null);
+                    setAuthLoading(false);
+                    return;
+                }
+
+                try {
+                    const r = await fetch('/api/x-me', {
+                        headers: { Authorization: `Bearer ${xToken}` },
+                    });
+                    if (r.ok) {
+                        const xUser: XUser = await r.json();
+                        await loadFirestoreProfile(`tw_${xUser.id}`, xUser);
+                    } else {
+                        // X token expired/revoked — clear everything
+                        localStorage.removeItem('x_access_token');
+                        setUser(null);
+                        setAuthLoading(false);
+                    }
+                } catch {
+                    setUser(null);
+                    setAuthLoading(false);
+                }
+            });
+
+            return () => unsubscribe();
+        };
+
+        init();
+        return () => { cancelled = true; };
+    }, []);
 
     // Monitor unread messages
     useEffect(() => {
@@ -144,27 +210,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             let total = 0;
             snap.docs.forEach(d => { total += (d.data().unreadCount?.[user.id!] || 0); });
             setUnreadMessagesCount(total);
-        }, () => { /* Firestore auth not available with Privy — suppress error */ });
+        }, () => {});
         return () => unsubscribe();
     }, [user?.id]);
 
-    // localStorage → state on first mount
-    useEffect(() => {
-        const savedJobs = localStorage.getItem('hub_bookmarked_jobs');
-        const savedAirdrops = localStorage.getItem('hub_tracked_airdrops');
-        const savedRes = localStorage.getItem('hub_saved_resumes');
-        if (savedJobs) setBookmarkedJobs(JSON.parse(savedJobs));
-        if (savedAirdrops) setTrackedAirdrops(JSON.parse(savedAirdrops));
-        if (savedRes) setSavedResumes(JSON.parse(savedRes));
-    }, []);
-
+    // Persist bookmarks/tracking to localStorage
     useEffect(() => { localStorage.setItem('hub_bookmarked_jobs', JSON.stringify(bookmarkedJobs)); }, [bookmarkedJobs]);
     useEffect(() => { localStorage.setItem('hub_tracked_airdrops', JSON.stringify(trackedAirdrops)); }, [trackedAirdrops]);
     useEffect(() => { localStorage.setItem('hub_saved_resumes', JSON.stringify(savedResumes)); }, [savedResumes]);
 
+    const login = () => startXLogin();
+
     const logout = async () => {
-        await privyLogout();
+        localStorage.removeItem('x_access_token');
+        if (auth?.currentUser) {
+            try { await auth.signOut(); } catch {}
+        }
         setUser(null);
+        setHasKolBadge(false);
         setBookmarkedJobs([]);
         setTrackedAirdrops([]);
         setSavedResumes([]);
@@ -223,7 +286,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (profile.openToWork !== undefined) saveData.openToWork = profile.openToWork;
             await setDoc(doc(db, 'talents', user.id), saveData, { merge: true });
         } catch (e) {
-            console.error('Firestore sync error:', e);
+            console.error('[AppContext] Firestore sync error:', e);
         }
     };
 
@@ -251,8 +314,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return (
         <AppContext.Provider value={{
             user,
-            isLoggedIn: authenticated && !!user,
-            authLoading: !ready || authLoading,
+            isLoggedIn: !!user,
+            authLoading,
             bookmarkedJobs,
             trackedAirdrops,
             savedResumes,
@@ -265,6 +328,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             updateProfile,
             logReferralEarning,
             unreadMessagesCount,
+            getAccessToken,
         }}>
             {children}
         </AppContext.Provider>

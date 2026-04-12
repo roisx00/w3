@@ -8,7 +8,6 @@ import {
 import { useAppContext } from '@/context/AppContext';
 import { Review } from '@/lib/types';
 import { Star, MessageSquarePlus, Trash2, Loader2, ExternalLink, ShieldCheck, Zap } from 'lucide-react';
-import { useWallets } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
 import { PAYMENT_WALLET, BASE_CHAIN_ID } from '@/lib/payments';
 
@@ -52,7 +51,6 @@ function scoreLabel(score: number) {
 
 export default function ReviewSection({ talentId, talentName, profileScore = 0 }: ReviewSectionProps) {
     const { user, isLoggedIn } = useAppContext();
-    const { wallets } = useWallets();
     const [reviews, setReviews] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -60,8 +58,6 @@ export default function ReviewSection({ talentId, talentName, profileScore = 0 }
     const [rating, setRating] = useState(0);
     const [text, setText] = useState('');
     const [error, setError] = useState('');
-
-    const embeddedWallet = wallets.find((w: any) => w.walletClientType === 'privy');
 
     const isOwnProfile = user?.id === talentId;
     const hasReviewed = reviews.some(r => r.reviewerId === user?.id);
@@ -88,14 +84,16 @@ export default function ReviewSection({ talentId, talentName, profileScore = 0 }
         e.preventDefault();
         if (rating === 0) { setError('Please select a star rating.'); return; }
         if (text.trim().length < 10) { setError('Review must be at least 10 characters.'); return; }
-        if (!embeddedWallet) { setError('No wallet found. Please sign in again.'); return; }
+        if (!(window as any).ethereum) { setError('MetaMask not found. Please install MetaMask to submit a review.'); return; }
         setError('');
         setSubmitting(true);
         try {
-            // Send 0 ETH tx — costs only Base gas (~$0.001), generates on-chain proof
-            await embeddedWallet.switchChain(BASE_CHAIN_ID);
-            const provider = await embeddedWallet.getEthereumProvider();
-            const ethersProvider = new ethers.BrowserProvider(provider);
+            await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+            await (window as any).ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: `0x${BASE_CHAIN_ID.toString(16)}` }],
+            }).catch(() => {});
+            const ethersProvider = new ethers.BrowserProvider((window as any).ethereum);
             const signer = await ethersProvider.getSigner();
             const tx = await signer.sendTransaction({
                 to: PAYMENT_WALLET,

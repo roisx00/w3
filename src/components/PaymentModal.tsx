@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { X, Wallet, Loader2, ShieldCheck, ShieldX, Sparkles, PartyPopper, AlertCircle } from 'lucide-react';
 import { PAYMENT_WALLET, BASE_CHAIN_ID, BASE_USDC_CONTRACT } from '@/lib/payments';
-import { useWallets } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
 import GoldBadge from './GoldBadge';
 
@@ -16,64 +15,102 @@ interface PaymentModalProps {
     loading?: boolean;
 }
 
-type PayState = 'idle' | 'switching' | 'sending' | 'verifying' | 'confirmed' | 'celebrating' | 'failed';
+type PayState = 'idle' | 'connecting' | 'switching' | 'sending' | 'verifying' | 'confirmed' | 'celebrating' | 'failed';
 type Currency = 'USDC' | 'ETH';
 
 const USDC_ABI = ['function transfer(address to, uint256 amount) returns (bool)'];
 
+declare global {
+    interface Window {
+        ethereum?: any;
+    }
+}
+
 export default function PaymentModal({ isOpen, onClose, onConfirm, amount, description, loading }: PaymentModalProps) {
-    const { wallets } = useWallets();
     const [payState, setPayState] = useState<PayState>('idle');
     const [error, setError] = useState('');
     const [currency, setCurrency] = useState<Currency>('USDC');
     const [ethPrice, setEthPrice] = useState<number>(0);
-    const ethAmount = ethPrice > 0 ? (amount / ethPrice) : 0;
+    const [connectedAddress, setConnectedAddress] = useState<string>('');
 
-    const embeddedWallet = wallets.find((w: any) => w.walletClientType === 'privy');
+    const ethAmount = ethPrice > 0 ? (amount / ethPrice) : 0;
+    const hasMetaMask = typeof window !== 'undefined' && !!window.ethereum;
 
     useEffect(() => {
         if (!isOpen) return;
-        // Binance public API — real-time, no key needed
+        // Real-time ETH price
         fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT')
             .then(r => r.json())
             .then(d => { if (d?.price) setEthPrice(parseFloat(d.price)); })
             .catch(() => {
-                // Fallback: Coinbase
                 fetch('https://api.coinbase.com/v2/prices/ETH-USD/spot')
                     .then(r => r.json())
                     .then(d => { if (d?.data?.amount) setEthPrice(parseFloat(d.data.amount)); })
                     .catch(() => {});
             });
+        // Check already-connected MetaMask account
+        if (hasMetaMask) {
+            window.ethereum.request({ method: 'eth_accounts' })
+                .then((accounts: string[]) => { if (accounts[0]) setConnectedAddress(accounts[0]); })
+                .catch(() => {});
+        }
     }, [isOpen]);
 
     if (!isOpen) return null;
 
     const handleClose = () => {
-        if (payState === 'sending' || payState === 'verifying' || payState === 'confirmed') return;
+        if (['sending', 'verifying', 'confirmed'].includes(payState)) return;
         setPayState('idle');
         setError('');
         onClose();
     };
 
     const handlePay = async () => {
-        if (!embeddedWallet) {
-            setError('No embedded wallet found. Please refresh and try again.');
+        if (!hasMetaMask) {
+            setError('MetaMask not found. Please install MetaMask or add your wallet address in your profile settings.');
+            setPayState('failed');
             return;
         }
 
         setError('');
-        setPayState('switching');
+        setPayState('connecting');
 
         try {
-            await embeddedWallet.switchChain(BASE_CHAIN_ID);
-            setPayState('sending');
+            // Request account access
+            const accounts: string[] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            if (!accounts[0]) throw new Error('No account connected');
+            setConnectedAddress(accounts[0]);
 
-            const provider = await embeddedWallet.getEthereumProvider();
-            const ethersProvider = new ethers.BrowserProvider(provider);
-            const signer = await ethersProvider.getSigner();
+            // Switch to Base Mainnet
+            setPayState('switching');
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: `0x${BASE_CHAIN_ID.toString(16)}` }],
+                });
+            } catch (switchErr: any) {
+                // Chain not added — add it
+                if (switchErr.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: `0x${BASE_CHAIN_ID.toString(16)}`,
+                            chainName: 'Base',
+                            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                            rpcUrls: ['https://mainnet.base.org'],
+                            blockExplorerUrls: ['https://basescan.org'],
+                        }],
+                    });
+                } else {
+                    throw switchErr;
+                }
+            }
+
+            setPayState('sending');
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
 
             let tx: any;
-
             if (currency === 'ETH') {
                 tx = await signer.sendTransaction({
                     to: PAYMENT_WALLET,
@@ -86,7 +123,6 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
             }
 
             setPayState('verifying');
-
             const verifyRes = await fetch('/api/verify-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -96,7 +132,7 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
 
             if (!verifyData.valid) {
                 setPayState('failed');
-                setError(verifyData.error || 'On-chain verification failed. Please contact support with your tx hash.');
+                setError(verifyData.error || 'On-chain verification failed. Contact support with your tx hash.');
                 return;
             }
 
@@ -107,21 +143,18 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
         } catch (e: any) {
             setPayState('failed');
             const msg = e?.message || '';
-            if (msg.includes('insufficient')) {
-                setError(`Insufficient ${currency} balance on Base Mainnet.`);
-            } else if (msg.includes('rejected') || msg.includes('denied')) {
-                setError('Transaction rejected.');
-            } else {
-                setError(msg.slice(0, 100) || 'Transaction failed. Please try again.');
-            }
+            if (msg.includes('insufficient')) setError(`Insufficient ${currency} balance on Base Mainnet.`);
+            else if (msg.includes('rejected') || msg.includes('denied') || e?.code === 4001) setError('Transaction rejected.');
+            else setError(msg.slice(0, 120) || 'Transaction failed. Please try again.');
         }
     };
 
     const payLabel = currency === 'USDC' ? `Pay $${amount} USDC` : `Pay ${ethAmount > 0 ? ethAmount.toFixed(5) : '...'} ETH`;
     const stateLabel: Record<PayState, string> = {
         idle: payLabel,
+        connecting: 'Connecting wallet...',
         switching: 'Switching to Base...',
-        sending: 'Confirm in wallet...',
+        sending: 'Confirm in MetaMask...',
         verifying: 'Confirming on-chain...',
         confirmed: 'Activating...',
         celebrating: 'Done!',
@@ -173,7 +206,7 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                         {/* Header */}
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-primary mb-1">One-Click Payment</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-primary mb-1">Pay via MetaMask</p>
                                 <h2 className="text-xl font-black uppercase">{description}</h2>
                             </div>
                             <button onClick={handleClose} className="p-2 text-foreground/20 hover:text-foreground transition-colors">
@@ -224,16 +257,20 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                                 <Wallet className="w-4 h-4 text-emerald-400" />
                             </div>
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30">Paying from</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30">
+                                    {connectedAddress ? 'Paying from' : 'Wallet'}
+                                </p>
                                 <p className="text-xs font-mono text-foreground/70">
-                                    {embeddedWallet?.address
-                                        ? `${embeddedWallet.address.slice(0, 8)}...${embeddedWallet.address.slice(-6)}`
-                                        : 'Embedded Wallet'}
+                                    {connectedAddress
+                                        ? `${connectedAddress.slice(0, 8)}...${connectedAddress.slice(-6)}`
+                                        : hasMetaMask ? 'MetaMask (click to connect)' : 'MetaMask not detected'}
                                 </p>
                             </div>
                             <div className="ml-auto flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                <span className="text-[10px] font-bold text-emerald-400">Base</span>
+                                <span className={`w-2 h-2 rounded-full ${hasMetaMask ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                                <span className={`text-[10px] font-bold ${hasMetaMask ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {hasMetaMask ? 'Base' : 'No Wallet'}
+                                </span>
                             </div>
                         </div>
 
@@ -244,7 +281,7 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                                 <div>
                                     <p className="text-xs font-bold text-accent-primary">{stateLabel[payState]}</p>
                                     {payState === 'sending' && (
-                                        <p className="text-[10px] text-foreground/30 mt-0.5">Approve the transaction in your wallet popup</p>
+                                        <p className="text-[10px] text-foreground/30 mt-0.5">Approve the transaction in your MetaMask popup</p>
                                     )}
                                 </div>
                             </div>
@@ -265,12 +302,16 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                             </div>
                         )}
 
-                        {/* No wallet warning */}
-                        {!embeddedWallet && (
+                        {/* No MetaMask warning */}
+                        {!hasMetaMask && (
                             <div className="flex items-start gap-3 bg-accent-warning/5 border border-accent-warning/20 p-3 rounded-xl">
                                 <AlertCircle className="w-4 h-4 text-accent-warning shrink-0 mt-0.5" />
                                 <p className="text-[10px] text-foreground/50 leading-relaxed">
-                                    No embedded wallet detected. Please sign out and sign back in with X to generate your wallet.
+                                    MetaMask is not installed.{' '}
+                                    <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline">
+                                        Install MetaMask
+                                    </a>{' '}
+                                    to pay directly from your wallet.
                                 </p>
                             </div>
                         )}
@@ -279,17 +320,17 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                         <div className="flex gap-3 pt-2">
                             <button
                                 onClick={handleClose}
-                                disabled={payState === 'sending' || payState === 'verifying' || payState === 'confirmed'}
+                                disabled={['sending', 'verifying', 'confirmed'].includes(payState)}
                                 className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-foreground/30 hover:text-foreground transition-colors disabled:opacity-30"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handlePay}
-                                disabled={!embeddedWallet || !!loading || ['switching', 'sending', 'verifying', 'confirmed', 'celebrating'].includes(payState)}
+                                disabled={!!loading || ['connecting', 'switching', 'sending', 'verifying', 'confirmed', 'celebrating'].includes(payState)}
                                 className="flex-1 py-3 bg-accent-success text-background font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
                             >
-                                {['switching', 'sending', 'verifying', 'confirmed'].includes(payState) && (
+                                {['connecting', 'switching', 'sending', 'verifying', 'confirmed'].includes(payState) && (
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 )}
                                 {stateLabel[payState]}
@@ -297,7 +338,7 @@ export default function PaymentModal({ isOpen, onClose, onConfirm, amount, descr
                         </div>
 
                         <p className="text-center text-[10px] text-foreground/20 font-bold uppercase tracking-widest">
-                            Sent directly from your W3Hub wallet · Base Mainnet · {currency}
+                            Sent via MetaMask · Base Mainnet · {currency}
                         </p>
                     </div>
                 )}

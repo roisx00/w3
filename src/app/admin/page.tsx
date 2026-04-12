@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
-import { usePrivy } from '@privy-io/react-auth';
 import { db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
@@ -40,8 +39,7 @@ import { PAYMENT_LABELS, BASE_EXPLORER_TX } from '@/lib/payments';
 type Tab = 'jobs' | 'airdrops' | 'users' | 'kols' | 'payments' | 'proposals';
 
 export default function AdminDashboard() {
-    const { user, isLoggedIn, authLoading } = useAppContext();
-    const { getAccessToken } = usePrivy();
+    const { user, isLoggedIn, authLoading, getAccessToken } = useAppContext();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<Tab>('payments');
     const [loading, setLoading] = useState(true);

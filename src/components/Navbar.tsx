@@ -2,35 +2,21 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowRight, Menu, X, User, Copy, Check, Download, Send, QrCode, ChevronDown } from 'lucide-react';
+import { ArrowRight, Menu, X, User, Copy, Check, ExternalLink } from 'lucide-react';
 import GoldBadge from '@/components/GoldBadge';
 import KOLBadge from '@/components/KOLBadge';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import { useLoginWithOAuth, useWallets, useExportWallet } from '@privy-io/react-auth';
 
 const Navbar = () => {
     const pathname = usePathname();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-    const [walletOpen, setWalletOpen] = useState(false);
     const [copied, setCopied] = useState(false);
-    const [showDeposit, setShowDeposit] = useState(false);
-    const [sendAddress, setSendAddress] = useState('');
-    const [sendAmount, setSendAmount] = useState('');
-    const [sending, setSending] = useState(false);
-    const [sendError, setSendError] = useState('');
-    const walletRef = useRef<HTMLDivElement>(null);
 
-    const { isLoggedIn, user, hasKolBadge } = useAppContext();
-    const { initOAuth } = useLoginWithOAuth();
-    const { wallets } = useWallets();
-    const { exportWallet } = useExportWallet();
+    const { isLoggedIn, user, hasKolBadge, login } = useAppContext();
 
-    const login = () => initOAuth({ provider: 'twitter' }).catch((e: any) => console.error('Privy OAuth error:', e));
-
-    const embeddedWallet = wallets.find((w: any) => w.walletClientType === 'privy');
-    const walletAddress = embeddedWallet?.address || user?.walletAddress || '';
+    const walletAddress = user?.walletAddress || '';
     const shortAddress = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '';
 
     useEffect(() => {
@@ -39,46 +25,11 @@ const Navbar = () => {
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
-    // Close wallet dropdown on outside click
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (walletRef.current && !walletRef.current.contains(e.target as Node)) {
-                setWalletOpen(false);
-                setShowDeposit(false);
-                setSendAddress('');
-                setSendAmount('');
-                setSendError('');
-            }
-        };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, []);
-
     const copyAddress = () => {
         if (!walletAddress) return;
         navigator.clipboard.writeText(walletAddress);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-    };
-
-    const handleSend = async () => {
-        if (!embeddedWallet || !sendAddress || !sendAmount) return;
-        setSending(true);
-        setSendError('');
-        try {
-            const provider = await embeddedWallet.getEthereumProvider();
-            const amountInWei = '0x' + Math.floor(parseFloat(sendAmount) * 1e18).toString(16);
-            await provider.request({
-                method: 'eth_sendTransaction',
-                params: [{ from: walletAddress, to: sendAddress, value: amountInWei }],
-            });
-            setSendAddress('');
-            setSendAmount('');
-            setWalletOpen(false);
-        } catch (e: any) {
-            setSendError(e?.message?.slice(0, 60) || 'Transaction failed');
-        }
-        setSending(false);
     };
 
     const navLinks = [
@@ -130,101 +81,22 @@ const Navbar = () => {
                 <div className="flex items-center gap-2">
                     {isLoggedIn ? (
                         <>
-                            {/* Wallet Button */}
+                            {/* Wallet address pill (desktop) */}
                             {walletAddress && (
-                                <div className="relative hidden sm:block" ref={walletRef}>
-                                    <button
-                                        onClick={() => setWalletOpen(v => !v)}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/40 transition-all duration-200 active:scale-95"
-                                    >
-                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                        <span className="text-[11px] font-mono font-bold text-emerald-400">{shortAddress}</span>
-                                        <ChevronDown className={`w-3 h-3 text-emerald-400/60 transition-transform ${walletOpen ? 'rotate-180' : ''}`} />
+                                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                    <span className="text-[11px] font-mono font-bold text-emerald-400">{shortAddress}</span>
+                                    <button onClick={copyAddress} className="ml-1 p-0.5 hover:text-emerald-300 transition-colors">
+                                        {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-emerald-400/60" />}
                                     </button>
-
-                                    {walletOpen && (
-                                        <div className="absolute right-0 top-full mt-2 w-72 glass-heavy border border-white/10 rounded-2xl p-4 shadow-2xl animate-in slide-in-from-top-2">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-foreground/30 mb-3">Embedded Wallet</p>
-
-                                            {/* Address */}
-                                            <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-xl mb-3">
-                                                <span className="text-xs font-mono text-foreground/70 truncate max-w-[180px]">{walletAddress}</span>
-                                                <button onClick={copyAddress} className="ml-2 flex-shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors">
-                                                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-foreground/40" />}
-                                                </button>
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="grid grid-cols-3 gap-2 mb-3">
-                                                <button
-                                                    onClick={() => { setShowDeposit(v => !v); setSendAddress(''); setSendAmount(''); }}
-                                                    className="flex flex-col items-center gap-1.5 p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
-                                                >
-                                                    <QrCode className="w-4 h-4 text-accent-primary" />
-                                                    <span className="text-[9px] font-black uppercase tracking-wider text-foreground/50">Deposit</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => { setSendAddress(''); setSendAmount(''); setShowDeposit(false); }}
-                                                    className="flex flex-col items-center gap-1.5 p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
-                                                >
-                                                    <Send className="w-4 h-4 text-accent-primary" />
-                                                    <span className="text-[9px] font-black uppercase tracking-wider text-foreground/50">Send</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => exportWallet()}
-                                                    className="flex flex-col items-center gap-1.5 p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
-                                                >
-                                                    <Download className="w-4 h-4 text-accent-primary" />
-                                                    <span className="text-[9px] font-black uppercase tracking-wider text-foreground/50">Export</span>
-                                                </button>
-                                            </div>
-
-                                            {/* Deposit panel */}
-                                            {showDeposit && (
-                                                <div className="p-3 bg-white/5 rounded-xl mb-2 text-center">
-                                                    <p className="text-[10px] text-foreground/40 mb-2 font-bold uppercase tracking-widest">Send ETH/tokens to this address</p>
-                                                    <p className="text-[10px] font-mono text-emerald-400 break-all">{walletAddress}</p>
-                                                    <p className="text-[9px] text-foreground/30 mt-1">Base network</p>
-                                                </div>
-                                            )}
-
-                                            {/* Send panel */}
-                                            {!showDeposit && (
-                                                <div className="space-y-2">
-                                                    <input
-                                                        value={sendAddress}
-                                                        onChange={e => setSendAddress(e.target.value)}
-                                                        placeholder="Recipient address (0x...)"
-                                                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-mono text-foreground/70 placeholder:text-foreground/20 focus:outline-none focus:border-accent-primary/40"
-                                                    />
-                                                    <input
-                                                        value={sendAmount}
-                                                        onChange={e => setSendAmount(e.target.value)}
-                                                        placeholder="Amount in ETH"
-                                                        type="number"
-                                                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-mono text-foreground/70 placeholder:text-foreground/20 focus:outline-none focus:border-accent-primary/40"
-                                                    />
-                                                    {sendError && <p className="text-[10px] text-red-400">{sendError}</p>}
-                                                    <button
-                                                        onClick={handleSend}
-                                                        disabled={sending || !sendAddress || !sendAmount}
-                                                        className="w-full py-2 bg-accent-primary/80 hover:bg-accent-primary text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors disabled:opacity-40"
-                                                    >
-                                                        {sending ? 'Sending...' : 'Send ETH'}
-                                                    </button>
-                                                </div>
-                                            )}
-
-                                            <a
-                                                href={`https://basescan.org/address/${walletAddress}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="block text-center text-[9px] font-bold text-foreground/20 hover:text-accent-primary transition-colors mt-2 uppercase tracking-widest"
-                                            >
-                                                View on BaseScan →
-                                            </a>
-                                        </div>
-                                    )}
+                                    <a
+                                        href={`https://basescan.org/address/${walletAddress}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-0.5 hover:text-emerald-300 transition-colors"
+                                    >
+                                        <ExternalLink className="w-3 h-3 text-emerald-400/60" />
+                                    </a>
                                 </div>
                             )}
 
