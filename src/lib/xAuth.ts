@@ -27,7 +27,7 @@ export interface XUser {
 
 export async function startXLogin(): Promise<void> {
     if (typeof window === 'undefined') return;
-    const redirectUri = window.location.origin + '/auth/callback';
+    const redirectUri = window.location.origin + '/';
     const code_verifier = randomB64();
     const code_challenge = await sha256B64(code_verifier);
     const state = randomB64();
